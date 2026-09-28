@@ -1,0 +1,31 @@
+{
+  "name": "planner-digital",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:integration": "node --env-file-if-exists=config/.env --test tests/*.integration.cjs",
+    "test:e2e": "node --env-file-if-exists=config/.env node_modules/@playwright/test/cli.js test -c tests/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.0.0",
+    "@types/supertest": "^7.2.1",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.9.9",
+    "supertest": "^7.3.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
