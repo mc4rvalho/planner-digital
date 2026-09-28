@@ -15,7 +15,7 @@ const schema = z.object({
   GEMINI_MODEL: z
     .string()
     .regex(/^[a-zA-Z0-9.\-]+$/)
-    .default("gemini-2.5-flash"),
+    .default("gemini-3.8-flash"),
 });
 export const env = schema.parse(process.env);
 if (env.JWT_SECRET.startsWith("replace-"))

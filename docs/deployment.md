@@ -16,7 +16,7 @@ Criar a conta e um Blueprint a partir do `render.yaml`. O arquivo define API Doc
 
 - `FRONTEND_URL`: origem HTTPS exata do frontend, sem barra final.
 - `GEMINI_API_KEY`: chave obtida no Google AI Studio, inserida somente no Render.
-- `GEMINI_MODEL`: `gemini-2.5-flash` como padrão configurável; verificar disponibilidade na conta antes do deploy.
+- `GEMINI_MODEL`: `gemini-3.8-flash` como padrão configurável; verificar disponibilidade na conta antes do deploy.
 
 `DATABASE_URL` é ligada ao PostgreSQL do Blueprint. O health check exige banco acessível; o primeiro boot cria o esquema.
 
@@ -45,3 +45,5 @@ Criar uma conta, entrar, adicionar evento, sair/entrar novamente e confirmar per
 - [Vite na Vercel](https://vercel.com/docs/frameworks/frontend/vite)
 - [Configuração de projeto Vercel](https://vercel.com/docs/project-configuration)
 - [Saída estruturada Gemini](https://ai.google.dev/gemini-api/docs/structured-output)
+
+O modelo padrão segue a [orientação atual do Google para projetos novos](https://ai.google.dev/gemini-api/docs/deprecations), consultada em 28/09/2026: a família 2.5 tem acesso limitado a usuários anteriores. O identificador pode ser substituído por `GEMINI_MODEL`. A chamada real ainda precisa ser validada com a chave da conta.
