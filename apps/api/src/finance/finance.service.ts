@@ -1,3 +1,4 @@
+import { requestGemini } from "../ai/request";
 import {
   BadRequestException,
   ConflictException,
@@ -231,7 +232,7 @@ export class FinanceService {
       required: ["transactions"],
     };
     try {
-      const response = await fetch(
+      const response = await requestGemini(
         `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`,
         {
           method: "POST",

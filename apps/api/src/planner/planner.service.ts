@@ -1,3 +1,4 @@
+import { requestGemini } from "../ai/request";
 import {
   BadRequestException,
   ConflictException,
@@ -160,7 +161,7 @@ export class PlannerService {
       required: ["events"],
     };
     try {
-      const res = await fetch(
+      const res = await requestGemini(
         `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`,
         {
           method: "POST",

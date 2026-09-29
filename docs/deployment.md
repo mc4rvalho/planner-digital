@@ -45,6 +45,14 @@ Criar um Deploy Hook para a branch `main` em cada plataforma e cadastrar no ambi
 - `RENDER_DEPLOY_HOOK`
 - `VERCEL_DEPLOY_HOOK`
 
+### Cadastrar os hooks no GitHub
+
+1. Render → serviço `planner-digital-api` → Settings → Deploy Hook: copie a URL secreta.
+2. Vercel → projeto `planner-digital` → Settings → Git → Deploy Hooks: crie um hook chamado `github-actions`, branch `main`, e copie a URL.
+3. GitHub → repositório `mc4rvalho/planner-digital` → Settings → Environments → `production` (crie esse ambiente se necessário) → Environment secrets → Add secret.
+4. Adicione `RENDER_DEPLOY_HOOK` com a URL do Render e `VERCEL_DEPLOY_HOOK` com a URL da Vercel. São **secrets**, não variables. Não publique as URLs em commits, issues ou mensagens.
+5. GitHub → Actions → execução de `CI and deploy` na branch `main` → Re-run failed jobs. Nos próximos pushes para `main`, o job `deploy` só roda após `verify` passar. Confira também os dois painéis para confirmar que os builds terminaram.
+
 Sem os hooks, o job de deploy falha explicitamente; ele não declara publicação bem-sucedida. A primeira configuração dos serviços ocorre nos painéis. Hooks iniciam builds assíncronos: o sucesso do workflow confirma a aceitação da solicitação, não a conclusão do deploy. Verificar logs e URL de saúde nas plataformas.
 
 Hooks publicam o HEAD da branch na hora do disparo; para promoção rigorosa de um SHA específico, evoluir para integração com as APIs/CLI dos provedores. A concorrência do workflow cancela execuções antigas, mas não cancela builds já aceitos pelos provedores.
@@ -63,3 +71,11 @@ Criar uma conta, entrar, adicionar evento, sair/entrar novamente e confirmar per
 O modelo padrão segue a [orientação atual do Google para projetos novos](https://ai.google.dev/gemini-api/docs/deprecations), consultada em 28/09/2026: a família 2.5 tem acesso limitado a usuários anteriores. O identificador pode ser substituído por `GEMINI_MODEL`. A chamada real ainda precisa ser validada com a chave da conta.
 
 Para habilitar recuperação de senha, cadastre também `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM` no serviço da API. Consulte [perfil e finanças](account-and-finance.md). Não coloque credenciais SMTP no frontend/Vercel.
+
+## Falhas temporárias de IA (503)
+
+Em 29/09/2026 foi reproduzida uma resposta HTTP 503 do Gemini `gemini-3.8-flash`, com status `UNAVAILABLE` por alta demanda. A chave estava configurada; esse erro não está relacionado aos Deploy Hooks.
+
+Planejamento e finanças fazem até três tentativas em falhas temporárias de rede ou HTTP 408/429/500/502/503/504, com espera exponencial, jitter e respeito a Retry-After. O prazo total continua sendo 45 segundos. Erros permanentes (por exemplo 400/401/403), validação da resposta e operações de gravação não são repetidos. Persistindo a indisponibilidade, a API retorna `AI_UNAVAILABLE` e o usuário pode tentar depois. Logs `[Gemini]` registram somente status/tentativa ou falha de rede/timeout, sem chave, texto do usuário ou corpo da resposta do provedor.
+
+Referência: [tratamento de erros do Gemini](https://ai.google.dev/gemini-api/docs/troubleshooting).
