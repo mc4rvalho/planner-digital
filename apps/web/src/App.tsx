@@ -646,6 +646,7 @@ export default function App() {
             aria-label={t("logout")}
             disabled={busy || saving}
             onClick={() => {
+              setMobile(false);
               setToken("");
               setUser(null);
               setEvents([]);
