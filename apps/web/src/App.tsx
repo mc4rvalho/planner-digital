@@ -71,12 +71,24 @@ export default function App() {
     () => new URLSearchParams(window.location.hash.slice(1)).get("reset") ?? "",
   );
   useEffect(() => {
-    if (resetToken)
-      history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search,
-      );
+    function openResetLink() {
+      const value = new URLSearchParams(window.location.hash.slice(1)).get("reset");
+      if (!value) return;
+      setToken("");
+      setUser(null);
+      setForgot(false);
+      setResetToken(value);
+      setEvents([]);
+      setDrafts(null);
+      setText("");
+      setError("");
+      setNotice("");
+      setMobile(false);
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    openResetLink();
+    window.addEventListener("hashchange", openResetLink);
+    return () => window.removeEventListener("hashchange", openResetLink);
   }, []);
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
   const [mobile, setMobile] = useState(false),
