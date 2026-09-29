@@ -4,7 +4,7 @@ import Modal from "./components/Modal";
 import Account from "./components/Account";
 import PasswordRecovery from "./components/PasswordRecovery";
 import Finance from "./components/Finance";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { DateTime } from "luxon";
 import {
   ArrowRight,
@@ -43,7 +43,12 @@ const defaults: Preferences = {
 };
 export default function App() {
   const [user, setUser] = useState<User | null>(null),
-    [token, setToken] = useState("");
+    [token, setTokenValue] = useState("");
+  const tokenRef = useRef("");
+  function setToken(next: string) {
+    tokenRef.current = next;
+    setTokenValue(next);
+  }
   const [prefs, setPrefs] = useState<Preferences>(defaults);
   const [page, setPage] = useState<
     "home" | "calendar" | "settings" | "profile" | "finance"
@@ -174,6 +179,7 @@ export default function App() {
           ...(register ? { nome: String(form.get("name")) } : {}),
         },
       );
+      setRegister(false);
       setUser(data.user);
       setToken(data.accessToken);
       setPrefs(data.user.preferences);
@@ -704,19 +710,26 @@ export default function App() {
               locale={prefs.locale}
               timezone={prefs.timezone}
               dateFormat={prefs.dateFormat}
-              onError={report}
+              onError={(e) => {
+                if (tokenRef.current === token) report(e);
+              }}
             />
           ) : page === "profile" ? (
             <Account
               user={user}
               token={token}
               locale={prefs.locale}
-              onUser={setUser}
+              onUser={(next) => {
+                if (tokenRef.current === token) setUser(next);
+              }}
               onSession={(data) => {
+                if (tokenRef.current !== token) return;
                 setUser(data.user);
                 setToken(data.accessToken);
               }}
-              onError={report}
+              onError={(e) => {
+                if (tokenRef.current === token) report(e);
+              }}
             />
           ) : page === "settings" ? (
             <>

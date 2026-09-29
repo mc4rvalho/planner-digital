@@ -38,13 +38,11 @@ test("profile, password, theme and financial dashboard work on desktop and mobil
       ctx.fillRect(0, 0, 4, 4);
       return canvas.toDataURL("image/png").split(",")[1];
     });
-    await page
-      .locator("input[type=file]")
-      .setInputFiles({
-        name: "avatar.png",
-        mimeType: "image/png",
-        buffer: Buffer.from(png, "base64"),
-      });
+    await page.locator("input[type=file]").setInputFiles({
+      name: "avatar.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(png, "base64"),
+    });
     await expect(
       page.getByRole("img", { name: "Foto do perfil" }),
     ).toBeVisible();
@@ -185,6 +183,51 @@ test("profile, password, theme and financial dashboard work on desktop and mobil
     ).toBeVisible();
     await expect(page.locator(".profile strong")).toHaveText("Nome Atualizado");
     await expect(page.locator(".profile .avatar img")).toHaveCount(1);
+    // A profile request finishing after logout must never restore the old user.
+    await navigate("Meu perfil");
+    let release!: () => void, ready!: () => void, finish!: () => void;
+    const gate = new Promise<void>((r) => (release = r)),
+      started = new Promise<void>((r) => (ready = r)),
+      finished = new Promise<void>((r) => (finish = r));
+    await page.route("**/account/profile", async (route) => {
+      const response = await route.fetch();
+      ready();
+      await gate;
+      try {
+        await route.fulfill({ response });
+      } finally {
+        finish();
+      }
+    });
+    await page
+      .getByRole("button", { name: "Salvar perfil", exact: true })
+      .click();
+    await started;
+    if (info.project.name === "mobile")
+      await page.getByRole("button", { name: "Menu", exact: true }).click();
+    await page.getByRole("button", { name: "Sair", exact: true }).click();
+    release();
+    await finished;
+    await expect(
+      page.getByRole("heading", { name: "Entrar", exact: true }),
+    ).toBeVisible();
+    await page.goto("/#reset=" + "a".repeat(64));
+    await expect(
+      page.getByRole("heading", { name: "Redefinir senha", exact: true }),
+    ).toBeVisible();
+    await expect.poll(() => new URL(page.url()).hash).toBe("");
+    await page
+      .getByRole("button", { name: "Voltar para o login", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Esqueci minha senha", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", {
+        name: "Enviar link de recuperação",
+        exact: true,
+      }),
+    ).toBeVisible();
   } finally {
     const db = new Pool({ connectionString: process.env.DATABASE_URL });
     await db.query("DELETE FROM users WHERE email=$1", [email]);
