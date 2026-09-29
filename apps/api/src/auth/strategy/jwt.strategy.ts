@@ -15,11 +15,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       audience: "planner-app",
     });
   }
-  async validate(payload: { sub?: string }) {
+  async validate(payload: { sub?: string; version?: number }) {
     if (!payload.sub || !/^[0-9a-f-]{36}$/i.test(payload.sub))
       throw new UnauthorizedException();
     const user = await this.users.findById(payload.sub);
-    if (!user) throw new UnauthorizedException();
+    if (!user || payload.version !== user.token_version)
+      throw new UnauthorizedException();
     return this.users.publicUser(user);
   }
 }

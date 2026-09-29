@@ -1,5 +1,7 @@
+import { featureMessages } from "./feature-messages";
 export const messages = {
   "pt-BR": {
+    ...featureMessages["pt-BR"],
     home: "Visão geral",
     calendar: "Calendário",
     settings: "Configurações",
@@ -104,6 +106,7 @@ export const messages = {
     invalidName: "Informe um nome com pelo menos 2 caracteres.",
   },
   "en-US": {
+    ...featureMessages["en-US"],
     home: "Overview",
     calendar: "Calendar",
     settings: "Settings",
@@ -203,6 +206,7 @@ export const messages = {
     invalidName: "Enter a name with at least 2 characters.",
   },
   "es-ES": {
+    ...featureMessages["es-ES"],
     home: "Resumen",
     calendar: "Calendario",
     settings: "Configuración",

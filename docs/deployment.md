@@ -47,3 +47,5 @@ Criar uma conta, entrar, adicionar evento, sair/entrar novamente e confirmar per
 - [Saída estruturada Gemini](https://ai.google.dev/gemini-api/docs/structured-output)
 
 O modelo padrão segue a [orientação atual do Google para projetos novos](https://ai.google.dev/gemini-api/docs/deprecations), consultada em 28/09/2026: a família 2.5 tem acesso limitado a usuários anteriores. O identificador pode ser substituído por `GEMINI_MODEL`. A chamada real ainda precisa ser validada com a chave da conta.
+
+Para habilitar recuperação de senha, cadastre também `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM` no serviço da API. Consulte [perfil e finanças](account-and-finance.md). Não coloque credenciais SMTP no frontend/Vercel.

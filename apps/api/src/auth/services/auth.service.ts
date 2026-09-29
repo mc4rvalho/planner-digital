@@ -60,7 +60,7 @@ export class AuthService {
   login(user: Omit<UserRow, "password">) {
     return {
       user,
-      accessToken: this.jwt.sign({ sub: user.id }),
+      accessToken: this.jwt.sign({ sub: user.id, version: user.token_version }),
       expiresIn: 3600,
     };
   }

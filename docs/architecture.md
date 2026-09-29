@@ -4,7 +4,7 @@
 
 O monorepositório usa npm workspaces. React/Vite entrega uma SPA responsiva; NestJS expõe uma API JSON independente do cliente. Isso permite conectar um futuro app móvel à mesma API sem reescrever autenticação e regras de agenda.
 
-PostgreSQL armazena usuários, preferências e eventos. A criação inicial das tabelas é idempotente, transacional e protegida por advisory lock. Alterações futuras do esquema devem usar migrações versionadas; `CREATE TABLE IF NOT EXISTS` não atualiza tabelas existentes.
+PostgreSQL armazena usuários, preferências e eventos. A criação inicial das tabelas é idempotente, transacional e protegida por advisory lock. Evoluções usam as migrações versionadas de `database/migrations.ts`, registradas em `schema_migrations`; `CREATE TABLE IF NOT EXISTS` permanece apenas para o esquema inicial.
 
 ## Autenticação
 
@@ -12,7 +12,7 @@ A estrutura segue o Auth Guard fornecido: `bcrypt/`, `constants/`, `controllers/
 
 A chave não fica no código. `JWT_SECRET` exige no mínimo 32 caracteres. O segredo de exemplo enviado na conversa não é usado. Senhas são hasheadas com bcrypt (custo 12); o cadastro valida comprimento mínimo e limite de 72 bytes do algoritmo. Senhas/hashes não entram nas respostas. Falhas de login usam uma mensagem uniforme.
 
-O cliente mantém o token apenas em memória; atualizar a página exige novo login. Logout descarta o token localmente, mas não revoga cópias de tokens já emitidos. Refresh tokens, recuperação de senha e confirmação de e-mail são evoluções futuras.
+O cliente mantém o token apenas em memória; atualizar a página exige novo login. Logout descarta o token localmente, mas não revoga cópias de tokens já emitidos. Troca e recuperação de senha incrementam `token_version`, invalidando JWTs anteriores. Recuperação usa token aleatório com hash, validade e consumo único. Refresh tokens e confirmação de e-mail são evoluções futuras.
 
 ## Isolamento e agenda
 
@@ -38,3 +38,5 @@ A chave Gemini fica exclusivamente no backend. A chamada tem timeout de 45 segun
 Helmet e CORS restrito à origem configurada protegem a API. Throttler limita requisições em memória: uma instância do backend é a configuração inicial. Para múltiplas réplicas, usar armazenamento de rate limit compartilhado. `trust proxy=1` pressupõe um único proxy confiável à frente do NestJS; revisar na mudança de infraestrutura.
 
 Docker usa build separado e processo sem root. GitHub Actions executa tipagem, build, testes, testes de navegador e build dos contêineres antes de disparar hooks de publicação.
+
+A área financeira, perfil, SMTP e migrações estão detalhados em [perfil e finanças](account-and-finance.md).

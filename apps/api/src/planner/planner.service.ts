@@ -66,13 +66,60 @@ export class PlannerService {
       client.release();
     }
   }
-  async update(userId: string, id: string, completed: boolean) {
-    const r = await this.db.query(
-      "UPDATE events SET completed=$3 WHERE id=$1 AND user_id=$2 RETURNING id",
-      [id, userId, completed],
-    );
-    if (!r.rowCount) throw new NotFoundException();
-    return { id, completed };
+  async update(
+    userId: string,
+    id: string,
+    input: PlannerEvent | { completed: boolean },
+  ) {
+    const client = await this.db.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [
+        userId,
+      ]);
+      if (
+        !(
+          await client.query(
+            "SELECT id FROM events WHERE id=$1 AND user_id=$2",
+            [id, userId],
+          )
+        ).rowCount
+      )
+        throw new NotFoundException();
+      if ("completed" in input) {
+        await client.query(
+          "UPDATE events SET completed=$3 WHERE id=$1 AND user_id=$2",
+          [id, userId, input.completed],
+        );
+      } else {
+        if (
+          (
+            await client.query(
+              "SELECT id FROM events WHERE user_id=$1 AND id<>$2 AND start_at<$4 AND end_at>$3",
+              [userId, id, input.start, input.end],
+            )
+          ).rowCount
+        )
+          throw new ConflictException("Event conflicts with your schedule");
+        await client.query(
+          "UPDATE events SET title=$3,start_at=$4,end_at=$5,category=$6 WHERE id=$1 AND user_id=$2",
+          [id, userId, input.title, input.start, input.end, input.category],
+        );
+      }
+      const result = (
+        await client.query(
+          "SELECT id,title,start_at AS start,end_at AS end,category,completed FROM events WHERE id=$1 AND user_id=$2",
+          [id, userId],
+        )
+      ).rows[0];
+      await client.query("COMMIT");
+      return result;
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
   }
   async remove(userId: string, id: string) {
     const r = await this.db.query(

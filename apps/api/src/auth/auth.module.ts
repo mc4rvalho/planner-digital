@@ -1,3 +1,4 @@
+import { AccountController, ResetMailer } from "../users/account.controller";
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
@@ -21,8 +22,15 @@ import { UsersService } from "../users/users.service";
       },
     }),
   ],
-  controllers: [AuthController],
-  providers: [Bcrypt, AuthService, LocalStrategy, JwtStrategy, UsersService],
+  controllers: [AuthController, AccountController],
+  providers: [
+    ResetMailer,
+    Bcrypt,
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    UsersService,
+  ],
   exports: [Bcrypt, UsersService],
 })
 export class AuthModule {}

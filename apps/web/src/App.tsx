@@ -1,10 +1,10 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { ApiError, request } from "./api";
+import type { Preferences, User, Event, Draft } from "./types";
+import Modal from "./components/Modal";
+import Account from "./components/Account";
+import PasswordRecovery from "./components/PasswordRecovery";
+import Finance from "./components/Finance";
+import { useEffect, useState, type FormEvent } from "react";
 import { DateTime } from "luxon";
 import {
   ArrowRight,
@@ -19,6 +19,10 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
+  Pencil,
+  UserRound,
+  Wallet,
   Plus,
   Settings2,
   Sparkles,
@@ -29,28 +33,6 @@ import {
 import { messages, type Locale, type MessageKey } from "./i18n";
 import { monthCells, rangeFor, shiftDate, type View } from "./calendar";
 import orbit from "./assets/orbit.svg";
-type Preferences = {
-  locale: Locale;
-  hourCycle: "h23" | "h12";
-  dateFormat: string;
-  timezone: string;
-  theme: "light" | "dark";
-};
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  preferences: Preferences;
-};
-type Event = {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  category: "work" | "personal" | "health" | "study";
-  completed: boolean;
-};
-type Draft = Pick<Event, "title" | "start" | "end" | "category">;
 const defaults: Preferences = {
   locale: "pt-BR",
   hourCycle: "h23",
@@ -59,77 +41,13 @@ const defaults: Preferences = {
     Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Recife",
   theme: "light",
 };
-const apiUrl = (
-  import.meta.env.VITE_API_URL || "http://localhost:3000"
-).replace(/\/$/, "");
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-async function request<T>(
-  path: string,
-  token: string,
-  method = "GET",
-  body?: unknown,
-  signal?: AbortSignal,
-): Promise<T> {
-  const response = await fetch(`${apiUrl}/${path}`, {
-    method,
-    signal,
-    headers: {
-      ...(body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok)
-    throw new ApiError(
-      response.status,
-      typeof data.message === "string" ? data.message : "",
-    );
-  return data;
-}
-function Modal({
-  children,
-  onClose,
-  label,
-}: {
-  children: ReactNode;
-  onClose: () => void;
-  label: string;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current!;
-    dialog.showModal();
-    return () => dialog.close();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      aria-label={label}
-      onCancel={onClose}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <button className="icon modal-close" onClick={onClose} aria-label="Close">
-        <X size={20} />
-      </button>
-      {children}
-    </dialog>
-  );
-}
 export default function App() {
   const [user, setUser] = useState<User | null>(null),
     [token, setToken] = useState("");
   const [prefs, setPrefs] = useState<Preferences>(defaults);
-  const [page, setPage] = useState<"home" | "calendar" | "settings">("home");
+  const [page, setPage] = useState<
+    "home" | "calendar" | "settings" | "profile" | "finance"
+  >("home");
   const [view, setView] = useState<View>("week");
   const [selected, setSelected] = useState(
     DateTime.now().setZone(defaults.timezone).toISODate()!,
@@ -142,6 +60,19 @@ export default function App() {
   const [text, setText] = useState(""),
     [busy, setBusy] = useState(false),
     [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [forgot, setForgot] = useState(false);
+  const [resetToken, setResetToken] = useState(
+    () => new URLSearchParams(window.location.hash.slice(1)).get("reset") ?? "",
+  );
+  useEffect(() => {
+    if (resetToken)
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+  }, []);
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
   const [mobile, setMobile] = useState(false),
     [register, setRegister] = useState(false);
@@ -273,6 +204,7 @@ export default function App() {
         "POST",
         { text, referenceDate: selected },
       );
+      setEditingId(null);
       setDrafts(result.events);
     } catch (e) {
       report(e);
@@ -281,6 +213,7 @@ export default function App() {
     }
   }
   function addEvent() {
+    setEditingId(null);
     const start = date.set({ hour: 9, minute: 0, second: 0, millisecond: 0 });
     setError("");
     setDrafts([
@@ -310,7 +243,9 @@ export default function App() {
     setSaving(true);
     setError("");
     try {
-      await request("events", token, "POST", { events: drafts });
+      if (editingId)
+        await request(`events/${editingId}`, token, "PATCH", drafts[0]);
+      else await request("events", token, "POST", { events: drafts });
       setDrafts(null);
       setText("");
       setReload((r) => r + 1);
@@ -361,6 +296,29 @@ export default function App() {
     } finally {
       setSaving(false);
     }
+  }
+  async function toggleTheme() {
+    const next = {
+      ...prefs,
+      theme: prefs.theme === "light" ? ("dark" as const) : ("light" as const),
+    };
+    setSaving(true);
+    setError("");
+    try {
+      await request("preferences", token, "PATCH", next);
+      setPrefs(next);
+      setSettings((old) => ({ ...old, theme: next.theme }));
+    } catch (e) {
+      report(e);
+    } finally {
+      setSaving(false);
+    }
+  }
+  function editEvent(event: Event) {
+    setEditingId(event.id);
+    setError("");
+    const { title, start, end, category } = event;
+    setDrafts([{ title, start, end, category }]);
   }
   function changeDraft(i: number, key: keyof Draft, value: string) {
     setDrafts((old) =>
@@ -422,6 +380,13 @@ export default function App() {
           </span>
         </div>
         <span className={`category ${e.category}`}>{t(e.category)}</span>
+        <button
+          className="icon"
+          onClick={() => editEvent(e)}
+          aria-label={t("editEvent")}
+        >
+          <Pencil size={15} />
+        </button>
         <button
           className="icon delete"
           onClick={() => removeEvent(e)}
@@ -520,68 +485,91 @@ export default function App() {
               <option value="es-ES">Español</option>
             </select>
           </div>
-          <form className="auth-form" onSubmit={authenticate}>
-            <span className="eyebrow">TEMPO / {today.year}</span>
-            <h2>{t(register ? "register" : "login")}</h2>
-            <p>{t("tagline")}</p>
-            {register && (
+          {forgot || resetToken ? (
+            <PasswordRecovery
+              token={resetToken}
+              locale={prefs.locale}
+              onBack={() => {
+                setForgot(false);
+                setResetToken("");
+              }}
+            />
+          ) : (
+            <form className="auth-form" onSubmit={authenticate}>
+              <span className="eyebrow">TEMPO / {today.year}</span>
+              <h2>{t(register ? "register" : "login")}</h2>
+              <p>{t("tagline")}</p>
+              {register && (
+                <label>
+                  {t("name")}
+                  <input
+                    name="name"
+                    autoComplete="name"
+                    minLength={2}
+                    maxLength={80}
+                    required
+                  />
+                </label>
+              )}
               <label>
-                {t("name")}
+                {t("email")}
                 <input
-                  name="name"
-                  autoComplete="name"
-                  minLength={2}
-                  maxLength={80}
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  required
+                  placeholder="voce@exemplo.com"
+                />
+              </label>
+              <label>
+                {t("password")}
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete={register ? "new-password" : "current-password"}
+                  minLength={register ? 10 : 1}
+                  maxLength={72}
                   required
                 />
               </label>
-            )}
-            <label>
-              {t("email")}
-              <input
-                name="email"
-                type="email"
-                autoComplete="email"
-                maxLength={254}
-                required
-                placeholder="voce@exemplo.com"
-              />
-            </label>
-            <label>
-              {t("password")}
-              <input
-                name="password"
-                type="password"
-                autoComplete={register ? "new-password" : "current-password"}
-                minLength={register ? 10 : 1}
-                maxLength={72}
-                required
-              />
-            </label>
-            {register && <small>{t("passwordHint")}</small>}
-            {error && (
-              <div className="error" role="alert">
-                {error}
-              </div>
-            )}
-            <button className="primary" disabled={busy}>
-              {busy ? t("loading") : t(register ? "register" : "login")}
-              <ArrowRight size={18} />
-            </button>
-            <p className="switch-auth">
-              {t(register ? "hasAccount" : "noAccount")}{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setRegister(!register);
-                  setError("");
-                }}
-              >
-                {t(register ? "login" : "register")}
+              {register && <small>{t("passwordHint")}</small>}
+              {error && (
+                <div className="error" role="alert">
+                  {error}
+                </div>
+              )}
+              <button className="primary" disabled={busy}>
+                {busy ? t("loading") : t(register ? "register" : "login")}
+                <ArrowRight size={18} />
               </button>
-            </p>
-            <small className="session-note">{t("sessionNote")}</small>
-          </form>
+              <p className="switch-auth">
+                {t(register ? "hasAccount" : "noAccount")}{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegister(!register);
+                    setError("");
+                  }}
+                >
+                  {t(register ? "login" : "register")}
+                </button>
+              </p>
+              {!register && (
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={() => {
+                    setForgot(true);
+                    setError("");
+                  }}
+                >
+                  {t("forgotPassword")}
+                </button>
+              )}
+              <small className="session-note">{t("sessionNote")}</small>
+            </form>
+          )}
         </section>
       </main>
     );
@@ -599,6 +587,8 @@ export default function App() {
             [
               { id: "home", icon: LayoutDashboard },
               { id: "calendar", icon: CalendarDays },
+              { id: "finance", icon: Wallet },
+              { id: "profile", icon: UserRound },
               { id: "settings", icon: Settings2 },
             ] as const
           ).map(({ id, icon: Icon }) => (
@@ -622,7 +612,13 @@ export default function App() {
           <span>✦</span>
         </div>
         <div className="profile">
-          <div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div>
+          <div className="avatar">
+            {user.photo ? (
+              <img src={user.photo} alt="" />
+            ) : (
+              user.name.slice(0, 1).toUpperCase()
+            )}
+          </div>
           <div>
             <strong>{user.name}</strong>
             <small>{user.email}</small>
@@ -667,10 +663,25 @@ export default function App() {
             <span className="muted">{date.toFormat("LLLL yyyy")}</span>
           </div>
           <div className="top-date">
+            <button
+              className="icon theme-toggle"
+              onClick={toggleTheme}
+              disabled={saving}
+              title={t(prefs.theme === "light" ? "switchDark" : "switchLight")}
+              aria-label={t(
+                prefs.theme === "light" ? "switchDark" : "switchLight",
+              )}
+            >
+              {prefs.theme === "light" ? <Moon size={19} /> : <Sun size={19} />}
+            </button>
             <span className="status-dot" />
             <span>{today.toFormat(prefs.dateFormat)}</span>
             <div className="avatar small">
-              {user.name.slice(0, 1).toUpperCase()}
+              {user.photo ? (
+                <img src={user.photo} alt="" />
+              ) : (
+                user.name.slice(0, 1).toUpperCase()
+              )}
             </div>
           </div>
         </header>
@@ -687,7 +698,27 @@ export default function App() {
               </button>
             </div>
           )}
-          {page === "settings" ? (
+          {page === "finance" ? (
+            <Finance
+              token={token}
+              locale={prefs.locale}
+              timezone={prefs.timezone}
+              dateFormat={prefs.dateFormat}
+              onError={report}
+            />
+          ) : page === "profile" ? (
+            <Account
+              user={user}
+              token={token}
+              locale={prefs.locale}
+              onUser={setUser}
+              onSession={(data) => {
+                setUser(data.user);
+                setToken(data.accessToken);
+              }}
+              onError={report}
+            />
+          ) : page === "settings" ? (
             <>
               <div className="page-heading">
                 <div>
@@ -1064,7 +1095,8 @@ export default function App() {
       </div>
       {drafts !== null && (
         <Modal
-          label={t("review")}
+          closeLabel={t("close")}
+          label={t(editingId ? "editEvent" : "review")}
           onClose={() => {
             if (!saving) {
               setDrafts(null);
@@ -1077,7 +1109,7 @@ export default function App() {
               <Sparkles size={15} />
               {t("review")}
             </span>
-            <h2>{t("review")}</h2>
+            <h2>{t(editingId ? "editEvent" : "review")}</h2>
             <p className="muted">{t("reviewSub")}</p>
             <div className="draft-list">
               {drafts.map((d, i) => (
@@ -1087,7 +1119,7 @@ export default function App() {
                     <button
                       type="button"
                       className="icon"
-                      disabled={saving}
+                      disabled={saving || !!editingId}
                       aria-label={t("removeSuggestion")}
                       onClick={() =>
                         setDrafts((old) => old!.filter((_, n) => n !== i))

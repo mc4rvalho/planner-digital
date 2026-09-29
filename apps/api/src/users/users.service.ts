@@ -5,6 +5,8 @@ export interface UserRow {
   name: string;
   email: string;
   password: string;
+  photo: string | null;
+  token_version: number;
   preferences: Record<string, string>;
 }
 @Injectable()

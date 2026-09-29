@@ -1,6 +1,7 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { Pool, QueryResultRow } from "pg";
 import { env } from "../config";
+import { migrations } from "./migrations";
 @Injectable()
 export class Database implements OnModuleInit, OnModuleDestroy {
   readonly pool = new Pool({ connectionString: env.DATABASE_URL });
@@ -19,6 +20,25 @@ export class Database implements OnModuleInit, OnModuleDestroy {
     category TEXT NOT NULL DEFAULT 'personal', completed BOOLEAN NOT NULL DEFAULT false,
     CHECK (end_at > start_at));
    CREATE INDEX IF NOT EXISTS events_user_start ON events(user_id, start_at);`);
+      await client.query(
+        "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())",
+      );
+      for (const migration of migrations) {
+        if (
+          !(
+            await client.query(
+              "SELECT version FROM schema_migrations WHERE version=$1",
+              [migration.version],
+            )
+          ).rowCount
+        ) {
+          await client.query(migration.sql);
+          await client.query(
+            "INSERT INTO schema_migrations(version) VALUES($1)",
+            [migration.version],
+          );
+        }
+      }
       await client.query("COMMIT");
     } catch (e) {
       await client.query("ROLLBACK");

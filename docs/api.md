@@ -10,7 +10,7 @@ Base local: `http://localhost:3000`. JSON em requisições e respostas. Rotas pr
 | GET    | `/usuarios/me`            | Retorna usuário e preferências                           |
 | GET    | `/events?from=ISO&to=ISO` | Lista intervalos que intersectam o período, até 370 dias |
 | POST   | `/events`                 | Insere lote atômico de 1–100 eventos                     |
-| PATCH  | `/events/:id`             | Altera conclusão do evento                               |
+| PATCH  | `/events/:id`             | Altera conclusão ou título/horário/categoria do evento                               |
 | DELETE | `/events/:id`             | Exclui evento próprio                                    |
 | PATCH  | `/preferences`            | Salva todas as preferências                              |
 | POST   | `/planner/propose`        | Gera sugestões, sem salvar                               |
@@ -70,3 +70,27 @@ Idiomas: `pt-BR`, `en-US`, `es-ES`. Horas: `h23`, `h12`. Datas: `dd/MM/yyyy`, `M
 Resposta: `{ "events": [...] }`. Não altera o banco. A data de referência é explícita para interpretar “amanhã”, “esta semana” etc.
 
 Erros: 400 entrada inválida, 401 não autenticado/token expirado, 404 evento inexistente ou não pertencente ao usuário, 409 conflito de cadastro/agenda, 429 limite de requisições e 503 Gemini indisponível/não configurado. Detalhes internos do provedor não são retornados.
+
+## Perfil e recuperação
+
+| Método | Rota | Corpo |
+| --- | --- | --- |
+| PATCH | `/account/profile` | `{ "name": "Ana", "photo": null }` ou foto como data URL raster |
+| POST | `/account/password` | `{ "currentPassword": "...", "newPassword": "..." }`; retorna nova sessão JWT |
+| POST | `/account/forgot-password` | `{ "email": "ana@example.com" }`; público, resposta genérica |
+| POST | `/account/reset-password` | `{ "token": "...", "newPassword": "..." }`; público, uso único |
+
+Edição completa de evento em `PATCH /events/:id` usa `{ title, start, end, category }`, sem `completed`; a conclusão tem atualização independente com `{ completed }`.
+
+## Finanças (rotas privadas)
+
+| Método | Rota | Comportamento |
+| --- | --- | --- |
+| GET | `/finance?from=2026-10-01&to=2026-11-01` | Dashboard, totais, gráficos e até 500 lançamentos; fim exclusivo |
+| GET/POST | `/finance/categories` | Lista ou cria categoria `{ name, color }` |
+| PATCH/DELETE | `/finance/categories/:id` | Edita ou exclui categoria própria |
+| POST | `/finance/transactions` | Lote `{ transactions: [...] }` |
+| PATCH/DELETE | `/finance/transactions/:id` | Edita ou exclui lançamento próprio |
+| POST | `/finance/propose` | `{ text, referenceDate }`; sugere sem salvar |
+
+Lançamento: `{ "description": "Mercado", "amountCents": 8290, "type": "expense", "date": "2026-10-01", "categoryId": null }`. Tipo: `income` ou `expense`. Todos os valores financeiros retornados nos totais/gráficos também são centavos. Categoria em edição/criação: `{ "name": "Alimentação", "color": "#7963d2" }`.

@@ -44,6 +44,17 @@ test("register, create and complete an event, switch locale and use year view", 
     await expect(
       page.getByRole("button", { name: "Marcar como pendente", exact: true }),
     ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Editar evento", exact: true })
+      .click();
+    await page.getByLabel("Título", { exact: true }).fill("Caminhada editada");
+    await page
+      .getByRole("button", { name: "Salvar na agenda", exact: true })
+      .click();
+    await expect(page.getByText("Caminhada editada").first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Marcar como pendente", exact: true }),
+    ).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: `test-results/${testInfo.project.name}-overview.png`,
@@ -54,7 +65,9 @@ test("register, create and complete an event, switch locale and use year view", 
     await page
       .getByRole("button", { name: "Configurações", exact: true })
       .click();
-    await page.getByRole("combobox", { name: "Idioma", exact: true }).selectOption("en-US");
+    await page
+      .getByRole("combobox", { name: "Idioma", exact: true })
+      .selectOption("en-US");
     await page
       .getByRole("combobox", { name: "Formato de horário", exact: true })
       .selectOption("h12");

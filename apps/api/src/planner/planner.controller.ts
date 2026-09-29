@@ -19,7 +19,12 @@ import { JwtAuthGuard } from "../auth/guard/jwt-auth.guard";
 import { AuthRequest } from "../auth/controllers/auth.controller";
 import { Database } from "../database/database.service";
 import { PlannerService } from "./planner.service";
-import { batchSchema, preferencesSchema, proposalSchema } from "./schemas";
+import {
+  batchSchema,
+  preferencesSchema,
+  proposalSchema,
+  eventSchema,
+} from "./schemas";
 function parse<T>(schema: z.ZodType<T>, body: unknown): T {
   const r = schema.safeParse(body);
   if (!r.success)
@@ -51,7 +56,10 @@ export class PlannerController {
     return this.planner.update(
       r.user.id,
       id,
-      parse(z.object({ completed: z.boolean() }).strict(), b).completed,
+      parse(
+        z.union([z.object({ completed: z.boolean() }).strict(), eventSchema]),
+        b,
+      ),
     );
   }
   @Delete("events/:id") remove(

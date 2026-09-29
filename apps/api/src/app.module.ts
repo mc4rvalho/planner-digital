@@ -1,3 +1,5 @@
+import { FinanceController } from "./finance/finance.controller";
+import { FinanceService } from "./finance/finance.service";
 import { Controller, Get, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
@@ -20,7 +22,11 @@ class HealthController {
     AuthModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
   ],
-  controllers: [HealthController, PlannerController],
-  providers: [PlannerService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  controllers: [HealthController, PlannerController, FinanceController],
+  providers: [
+    FinanceService,
+    PlannerService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

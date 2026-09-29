@@ -1,12 +1,16 @@
 import "reflect-metadata";
+import { NestExpressApplication } from "@nestjs/platform-express";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { env } from "./config";
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: true,
+  });
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
+  app.useBodyParser("json", { limit: "512kb" });
   app.use(helmet());
   app.enableCors({
     origin: env.FRONTEND_URL,
