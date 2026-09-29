@@ -59,6 +59,6 @@ tests/             Testes de domínio, integração e navegador
 
 Consulte [arquitetura](docs/architecture.md), [API](docs/api.md), [publicação](docs/deployment.md) [perfil e finanças](docs/account-and-finance.md) e [escopo/limitações](docs/scope.md).
 
-**Publicação:** os arquivos de deploy estão preparados. A presença desses arquivos não significa que os serviços já foram criados ou publicados. As contas Render/Vercel, a chave Gemini e os hooks precisam ser configurados pelo proprietário.
+**Publicado:** [abrir o planner](https://planner-digital-rho.vercel.app). A API está no Render e o frontend na Vercel. SMTP e Deploy Hooks do CI/CD ainda precisam ser configurados; o banco gratuito expira em 30 dias. Consulte [publicação](docs/deployment.md) antes de armazenar dados definitivos.
 
 A recuperação de senha exige as variáveis `SMTP_*` documentadas em `config/.env.example`. Perfil, troca de senha autenticada, edição de eventos e finanças manuais funcionam sem SMTP.

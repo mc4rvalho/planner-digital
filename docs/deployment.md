@@ -2,6 +2,20 @@
 
 Repositório informado: https://github.com/mc4rvalho/planner-digital.
 
+## Instância publicada em 29/09/2026
+
+- Frontend: https://planner-digital-rho.vercel.app
+- API: https://planner-digital-api.onrender.com
+- Saúde da API e banco: https://planner-digital-api.onrender.com/health
+- Render: workspace **Tempo - Planner Digital**, serviço `planner-digital-api` e PostgreSQL `planner-digital-db`, região Virginia, planos gratuitos.
+- Vercel: projeto `planner-digital`, equipe `mc4rvalhos-projects`, conectado ao repositório.
+
+A primeira publicação foi realizada pelas APIs das plataformas, usando as configurações do repositório. Não foi criado um Blueprint gerenciado: não importe outro Blueprint sem revisar os recursos existentes, para evitar duplicação. O JWT de produção foi gerado separadamente. A chave Gemini foi configurada somente na API. `config/.env` local permanece separado da produção.
+
+SMTP não foi enviado: sua configuração ficou a cargo do proprietário. O Render gratuito bloqueia as portas SMTP 25, 465 e 587; usar SMTP nessas portas exige mudar o plano da API, ou adaptar o aplicativo para envio por HTTPS. O PostgreSQL gratuito expira em 30 dias e não tem backups: escolha um plano persistente antes de depender do sistema para dados reais. Consulte as [limitações do Render](https://render.com/docs/free).
+
+Os deploys iniciais estão publicados, mas o CI/CD descrito abaixo ainda depende de cadastrar os dois Deploy Hooks no ambiente GitHub `production`. Até isso ser feito, novos pushes validam o código, mas a etapa de deploy falha por falta dos secrets.
+
 ## 1. GitHub
 
 Enviar a implementação e o `package-lock.json` para `main`. Nunca enviar `config/.env`. O workflow usa o ambiente GitHub `production`, que deve ser criado em Settings → Environments.
