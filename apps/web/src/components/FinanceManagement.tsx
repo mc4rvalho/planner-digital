@@ -711,6 +711,7 @@ export default function FinanceManagement({
             <label>
               {t("dueWeek")}
               <select
+                aria-label={t("dueWeek")}
                 disabled={!bill.dueDate}
                 value={String(Math.ceil(Number(bill.dueDate.slice(-2)) / 7))}
                 onChange={(e) => {
@@ -736,6 +737,7 @@ export default function FinanceManagement({
                 <label>
                   {t("billRepeat")}
                   <select
+                    aria-label={t("billRepeat")}
                     value={bill.repeat}
                     onChange={(e) =>
                       setBill({
