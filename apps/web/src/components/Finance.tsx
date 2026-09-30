@@ -26,7 +26,13 @@ import { amountText, parseAmount } from "../money";
 import Modal from "./Modal";
 type Dashboard = {
   transactions: Transaction[];
-  summary: { income: number; expense: number; balance: number; count: number };
+  summary: {
+    income: number;
+    expense: number;
+    balance: number;
+    count: number;
+    spending: number;
+  };
   daily: { date: string; income: number; expense: number }[];
   byCategory: { name: string | null; color: string | null; amount: number }[];
 };
@@ -554,7 +560,7 @@ export default function Finance({
                       />
                       {data?.byCategory.map((c, i) => {
                         const length =
-                          (c.amount / (data.summary.expense || 1)) * 282.743;
+                          (c.amount / (data.summary.spending || 1)) * 282.743;
                         const prior = offset;
                         offset += length;
                         return (
@@ -589,7 +595,7 @@ export default function Finance({
                       ))}
                     </ul>
                   </div>
-                  {!data?.summary.expense && (
+                  {!data?.summary.spending && (
                     <p className="muted">{t("financeEmpty")}</p>
                   )}
                 </section>

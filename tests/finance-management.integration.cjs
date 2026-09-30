@@ -103,6 +103,13 @@ test("financial commitments, partial payments, investment capital and proposal l
         await auth(http.get("/finance?from=2026-10-01&to=2026-11-01"))
       ).body;
       assert.equal(dashboard.summary.expense, 30000);
+      assert.equal(
+        dashboard.byCategory.reduce(
+          (sum, category) => sum + category.amount,
+          0,
+        ),
+        30000,
+      );
       await auth(http.post("/finance/transactions"))
         .send({ transactions: [transaction(10001)] })
         .expect(409);
@@ -228,6 +235,7 @@ test("financial commitments, partial payments, investment capital and proposal l
       assert.equal(dashboard.summary.invested, 50000);
       assert.equal(dashboard.summary.redeemed, 20000);
       assert.equal(dashboard.summary.spending, 0);
+      assert.deepEqual(dashboard.byCategory, []);
     },
   );
   await t.test(

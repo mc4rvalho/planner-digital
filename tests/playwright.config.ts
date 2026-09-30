@@ -28,6 +28,7 @@ export default defineConfig({
       url: `http://localhost:${apiPort}/health`,
       env: { PORT: apiPort, FRONTEND_URL: `http://localhost:${webPort}` },
       reuseExistingServer: false,
+      timeout: process.env.CI ? 60000 : 180000,
       cwd: "..",
     },
     {
@@ -35,6 +36,7 @@ export default defineConfig({
       url: `http://localhost:${webPort}`,
       env: { VITE_API_URL: `http://localhost:${apiPort}` },
       reuseExistingServer: false,
+      timeout: process.env.CI ? 60000 : 180000,
       cwd: "..",
     },
   ],

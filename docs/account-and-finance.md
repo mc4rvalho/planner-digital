@@ -63,7 +63,7 @@ Cadastre a conta antes de usar o campo de texto: “Hoje paguei R$ 300 da energi
 
 ## Investimentos
 
-Cadastre um investimento e uma meta opcional. Aportes são saídas de caixa vinculadas ao investimento; resgates são entradas. O saldo exibido é **aportes menos resgates de capital**, não valor de mercado. Não há cotações, rentabilidade, impostos, integração bancária ou recomendação de investimento. O histórico é manual. O servidor não permite deixar saldo de capital negativo, inclusive ao editar datas ou excluir aportes que já sustentam um resgate. Movimentações no mesmo dia são consolidadas por data; não há horário intradiário.
+Cadastre um investimento e uma meta opcional. Aportes são saídas de caixa vinculadas ao investimento; resgates são entradas. O saldo exibido é **aportes menos resgates de capital**, não valor de mercado. Não há cotações, rentabilidade, impostos, integração bancária ou recomendação de investimento. O gráfico de gastos por categoria exclui aportes; o fluxo de caixa continua mostrando todas as entradas e saídas. O histórico é manual. O servidor não permite deixar saldo de capital negativo, inclusive ao editar datas ou excluir aportes que já sustentam um resgate. Movimentações no mesmo dia são consolidadas por data; não há horário intradiário.
 
 ## Rotinas explícitas e indisponibilidade da IA
 

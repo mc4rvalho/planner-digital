@@ -2001,7 +2001,9 @@ dialog p {
 .management-intro .primary { flex-shrink:0; }
 .bill-scope { display:flex; align-items:center; gap:12px; font-size:13px; margin-bottom:20px; }
 .bill-scope select { max-width:280px; }
-.management-totals h2 { margin:8px 0 0; font-size:24px; }
+.management-totals { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.management-totals .stat { min-width:0; }
+.management-totals h2 { margin:8px 0 0; font-size:24px; overflow-wrap:anywhere; }
 .obligation-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-bottom:26px; }
 .obligation-card { padding:22px; min-width:0; }
 .obligation-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -2017,7 +2019,7 @@ dialog p {
 .obligation-card progress::-webkit-progress-value { background:#7963d2; }
 .obligation-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:20px; }
 .obligation-actions .secondary { font-size:12px; padding:9px 12px; }
-.obligation-actions .text-button { margin-left:auto; }
+.obligation-actions .text-button { margin:0 0 0 auto; padding:9px 0; }
 .payment-history { margin-top:20px; padding-top:14px; border-top:1px solid var(--border); }
 .payment-history h3 { font-size:13px; }
 .history-row { display:flex; align-items:center; gap:8px; padding:10px 0; font-size:12px; }
@@ -2029,6 +2031,9 @@ dialog p {
  .management-intro { flex-direction:column; align-items:stretch; }
  .finance-tabs button { flex:1; padding:10px 8px; font-size:12px; }
  .obligation-card { padding:16px; }
+ .management-totals { grid-template-columns:1fr; }
+ .management-totals .stat > div { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+ .management-totals h2 { margin:0; font-size:20px; }
  .bill-values { gap:6px; }
  .bill-values strong { font-size:14px; }
  .bill-scope { flex-direction:column; align-items:stretch; }

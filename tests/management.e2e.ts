@@ -30,6 +30,7 @@ test('explicit routine, partial bills and investment capital work on desktop and
     await expect(energy.locator('.bill-values')).toContainText(/300,00/);
     await expect(energy.locator('.bill-values')).toContainText(/100,00/);
     await expect(energy.locator('.payment-status')).toContainText('Parcial');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
     await energy.getByRole('button',{name:'Histórico',exact:true}).click();
     await energy.getByRole('button',{name:'Editar lançamento: Energia',exact:true}).click();
     await page.getByRole('dialog').getByLabel('Valor (R$)',{exact:true}).fill('200');

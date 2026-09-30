@@ -260,7 +260,7 @@ export class FinanceService {
       ).rows;
       const byCategory = (
         await client.query(
-          `SELECT c.name,c.color,sum(t.amount_cents)::float8 AS amount FROM finance_transactions t LEFT JOIN finance_categories c ON c.id=t.category_id AND c.user_id=t.user_id WHERE t.user_id=$1 AND t.occurred_on>=$2 AND t.occurred_on<$3 AND t.type='expense' GROUP BY c.id,c.name,c.color ORDER BY amount DESC`,
+          `SELECT c.name,c.color,sum(t.amount_cents)::float8 AS amount FROM finance_transactions t LEFT JOIN finance_categories c ON c.id=t.category_id AND c.user_id=t.user_id WHERE t.user_id=$1 AND t.occurred_on>=$2 AND t.occurred_on<$3 AND t.type='expense' AND t.investment_id IS NULL GROUP BY c.id,c.name,c.color ORDER BY amount DESC`,
           params,
         )
       ).rows;
