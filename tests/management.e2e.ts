@@ -1,12 +1,22 @@
 import { test,expect } from '@playwright/test';
 import { Pool } from 'pg';
+import { randomUUID } from 'node:crypto';
+import { hash } from 'bcrypt';
 
 test('explicit routine, partial bills and investment capital work on desktop and mobile',async({page},info)=>{
   const email=`management-ui-${info.project.name}-${Date.now()}@example.com`;
   const routine='Rodar das 05h30 até às 12h.\nAlmoçar e Descansar das 12h até às 15h.\nArrumar a casa às 16h até às 17h.\nRodar das 17h até às 20h.\nEstudar das 20h até às 22h.';
   try {
-    await page.goto('/');await page.getByRole('button',{name:'Criar conta',exact:true}).click();
-    await page.getByLabel('Seu nome').fill('Gestão Financeira');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill('management-strong-password');await page.getByRole('button',{name:'Criar conta',exact:true}).click();
+    // Signup is covered by planner.e2e.ts. Seed this independent finance fixture
+    // so six browser scenarios do not exhaust the five-signups/minute protection.
+    const setupPool = new Pool({connectionString:process.env.DATABASE_URL});
+    try {
+      await setupPool.query('INSERT INTO users(id,name,email,password) VALUES($1,$2,$3,$4)', [randomUUID(), 'Gestão Financeira', email, await hash('management-strong-password', 10)]);
+    } finally { await setupPool.end(); }
+    await page.goto('/');
+    await page.getByLabel('E-mail',{exact:true}).fill(email);
+    await page.getByLabel('Senha',{exact:true}).fill('management-strong-password');
+    await page.getByRole('button',{name:'Entrar',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Seu tempo, com intenção.'})).toBeVisible();
     await page.locator('textarea').fill(routine);
     // This explicit timetable is parsed by the real backend, with no provider mock or API key needed.
