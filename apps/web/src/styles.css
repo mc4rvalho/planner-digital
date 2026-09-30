@@ -2040,3 +2040,13 @@ dialog p {
  .bill-scope select { max-width:none; }
  .payment-status { max-width:115px; text-align:center; }
 }
+
+.finance-week { margin-bottom: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+.finance-week-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.finance-week-heading h3 { margin: 0; }
+.finance-week-heading span { font-size: 12px; color: var(--muted); }
+.finance-week-totals { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 18px 0; }
+.finance-week-totals dt { font-size: 11px; color: var(--muted); }
+.finance-week-totals dd { margin: 6px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.recurrence-preview { padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.recurrence-preview p { max-height: 100px; overflow: auto; }

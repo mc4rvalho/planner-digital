@@ -379,4 +379,76 @@ test("financial commitments, partial payments, investment capital and proposal l
       }
     },
   );
+  await t.test(
+    "weekly bills have independent balances, cross years, and reject ambiguous repetition",
+    async () => {
+      const create = await auth(http.post("/finance/obligations"))
+        .send({
+          ...body,
+          title: "Adias",
+          kind: "debt",
+          totalCents: 20000,
+          dueDate: "2026-10-01",
+          weeks: 4,
+        })
+        .expect(201);
+      const ids = create.body.map((x) => x.id);
+      let bills = (await auth(http.get("/finance/obligations"))).body.filter(
+        (x) => ids.includes(x.id),
+      );
+      assert.deepEqual(
+        bills.map((x) => x.dueDate),
+        ["2026-10-01", "2026-10-08", "2026-10-15", "2026-10-22"],
+      );
+      assert.equal(new Set(bills.map((x) => x.seriesId)).size, 1);
+      assert.ok(bills[0].seriesId);
+      await auth(http.post("/finance/transactions"))
+        .send({
+          transactions: [
+            transaction(5000, { obligationId: ids[0], date: "2026-10-01" }),
+          ],
+        })
+        .expect(201);
+      bills = (await auth(http.get("/finance/obligations"))).body.filter((x) =>
+        ids.includes(x.id),
+      );
+      assert.deepEqual(
+        bills.map((x) => x.remainingCents),
+        [15000, 20000, 20000, 20000],
+      );
+      await auth(http.patch(`/finance/obligations/${ids[1]}`))
+        .send({
+          title: "Adias",
+          kind: "debt",
+          totalCents: 20000,
+          dueDate: "2026-10-16",
+          categoryId: null,
+        })
+        .expect(200);
+      bills = (await auth(http.get("/finance/obligations"))).body.filter((x) =>
+        ids.includes(x.id),
+      );
+      assert.equal(bills.find((x) => x.id === ids[1]).dueDate, "2026-10-16");
+      assert.equal(bills.find((x) => x.id === ids[2]).dueDate, "2026-10-15");
+      const next = await auth(http.post("/finance/obligations"))
+        .send({ ...body, dueDate: "2026-12-28", weeks: 3 })
+        .expect(201);
+      const nextIds = next.body.map((x) => x.id);
+      assert.deepEqual(
+        (await auth(http.get("/finance/obligations"))).body
+          .filter((x) => nextIds.includes(x.id))
+          .map((x) => x.dueDate),
+        ["2026-12-28", "2027-01-04", "2027-01-11"],
+      );
+      for (const extra of [
+        { weeks: 0 },
+        { weeks: 53 },
+        { weeks: 1.5 },
+        { weeks: 4, months: 2 },
+      ])
+        await auth(http.post("/finance/obligations"))
+          .send({ ...body, ...extra })
+          .expect(400);
+    },
+  );
 });

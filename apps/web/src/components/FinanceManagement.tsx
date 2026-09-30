@@ -12,6 +12,7 @@ import type {
   FinanceDraft,
 } from "../finance-types";
 import Modal from "./Modal";
+import { financeWeeks } from "../finance-weeks";
 
 type BillForm = {
   id?: string;
@@ -21,6 +22,8 @@ type BillForm = {
   dueDate: string;
   categoryId: string;
   months: number;
+  weeks: number;
+  repeat: "once" | "weekly" | "monthly";
 };
 type InvestmentForm = { id?: string; name: string; target: string };
 export default function FinanceManagement({
@@ -63,6 +66,7 @@ export default function FinanceManagement({
       currency: "BRL",
     }).format(cents / 100);
   const today = DateTime.now().setZone(timezone).toISODate()!;
+  const [billView, setBillView] = useState<"weekly" | "list">("weekly");
   const [scope, setScope] = useState("month"),
     [bill, setBill] = useState<BillForm | null>(null),
     [investment, setInvestment] = useState<InvestmentForm | null>(null);
@@ -75,6 +79,38 @@ export default function FinanceManagement({
       scope === "all" ||
       (scope === "open" ? o.remainingCents > 0 : o.dueDate.startsWith(month)),
   );
+  const weekly = billView === "weekly" && scope === "month";
+  const groups = weekly
+    ? financeWeeks(month, filtered)
+    : [
+        {
+          number: 0,
+          from: "",
+          to: "",
+          bills: filtered,
+          total: 0,
+          paid: 0,
+          remaining: 0,
+        },
+      ];
+  const repeatCount = bill
+    ? bill.repeat === "weekly"
+      ? bill.weeks
+      : bill.repeat === "monthly"
+        ? bill.months
+        : 1
+    : 0;
+  const duePreview =
+    bill &&
+    Number.isInteger(repeatCount) &&
+    repeatCount >= 1 &&
+    repeatCount <= 52
+      ? Array.from({ length: repeatCount }, (_, i) =>
+          DateTime.fromISO(bill.dueDate, { zone: "UTC" })
+            .plus(bill.repeat === "weekly" ? { weeks: i } : { months: i })
+            .toFormat(dateFormat),
+        )
+      : [];
   const totals = filtered.reduce(
     (a, o) => ({
       total: a.total + o.totalCents,
@@ -142,7 +178,13 @@ export default function FinanceManagement({
           categoryId: bill.categoryId || null,
           ...(bill.id
             ? {}
-            : { months: bill.kind === "fixed" ? bill.months : 1 }),
+            : {
+                months:
+                  bill.repeat === "monthly" && bill.kind === "fixed"
+                    ? bill.months
+                    : 1,
+                weeks: bill.repeat === "weekly" ? bill.weeks : 1,
+              }),
         },
       );
       setBill(null);
@@ -259,6 +301,8 @@ export default function FinanceManagement({
                 dueDate: month === today.slice(0, 7) ? today : month + "-01",
                 categoryId: "",
                 months: 1,
+                weeks: 4,
+                repeat: "once",
               });
             else setInvestment({ name: "", target: "" });
           }}
@@ -274,6 +318,28 @@ export default function FinanceManagement({
       )}
       {view === "bills" ? (
         <>
+          <div className="finance-tabs" aria-label={t("bills")}>
+            <button
+              type="button"
+              className={weekly ? "active" : ""}
+              aria-pressed={weekly}
+              onClick={() => {
+                setBillView("weekly");
+                setScope("month");
+              }}
+            >
+              {t("weeklyView")}
+            </button>
+            <button
+              type="button"
+              className={!weekly ? "active" : ""}
+              aria-pressed={!weekly}
+              onClick={() => setBillView("list")}
+            >
+              {t("listView")}
+            </button>
+          </div>
+          {weekly && <p className="finance-note">{t("weeklyHint")}</p>}
           <label className="bill-scope">
             {t("billScope")}
             <select value={scope} onChange={(e) => setScope(e.target.value)}>
@@ -304,111 +370,153 @@ export default function FinanceManagement({
               <p>{t("noBills")}</p>
             </div>
           )}
-          <div className="obligation-grid">
-            {filtered.map((o) => {
-              const status =
-                o.remainingCents === 0
-                  ? "paid"
-                  : o.paidCents > 0
-                    ? "partial"
-                    : "pending";
-              const isOverdue = o.remainingCents > 0 && o.dueDate < today;
-              return (
-                <article className="card obligation-card" key={o.id}>
-                  <div className="obligation-heading">
-                    <div>
-                      <small>
-                        {t(o.kind)} ·{" "}
-                        {DateTime.fromISO(o.dueDate).toFormat(dateFormat)}
-                      </small>
-                      <h3>{o.title}</h3>
-                    </div>
-                    <span
-                      className={`payment-status ${isOverdue ? "overdue" : status}`}
-                    >
-                      {isOverdue ? `${t("overdue")} · ` : ""}
-                      {t(status)}
+          {groups.map((group) => (
+            <section
+              className={weekly ? "finance-week" : undefined}
+              key={group.number}
+              aria-label={
+                weekly ? `${t("financeWeek")} ${group.number}` : undefined
+              }
+            >
+              {weekly && (
+                <>
+                  <div className="finance-week-heading">
+                    <h3>
+                      {t("financeWeek")} {group.number}
+                    </h3>
+                    <span>
+                      {DateTime.fromISO(group.from).toFormat(dateFormat)} –{" "}
+                      {DateTime.fromISO(group.to).toFormat(dateFormat)}
                     </span>
                   </div>
-                  <div className="bill-values">
+                  <dl className="finance-week-totals">
                     <div>
-                      <small>{t("plannedTotal")}</small>
-                      <strong>{money(o.totalCents)}</strong>
+                      <dt>{t("plannedTotal")}</dt>
+                      <dd>{money(group.total)}</dd>
                     </div>
                     <div>
-                      <small>{t("paidTotal")}</small>
-                      <strong>{money(o.paidCents)}</strong>
+                      <dt>{t("paidTotal")}</dt>
+                      <dd>{money(group.paid)}</dd>
                     </div>
                     <div>
-                      <small>{t("remaining")}</small>
-                      <strong>{money(o.remainingCents)}</strong>
+                      <dt>{t("remaining")}</dt>
+                      <dd>{money(group.remaining)}</dd>
                     </div>
-                  </div>
-                  <progress
-                    value={o.paidCents}
-                    max={o.totalCents}
-                    aria-label={`${o.title}: ${t("paidTotal")}`}
-                  />
-                  <div className="obligation-actions">
-                    <button
-                      className="secondary"
-                      disabled={saving || o.remainingCents === 0}
-                      onClick={() =>
-                        onDraft({
-                          description: o.title,
-                          amount: amountText(o.remainingCents),
-                          date: today,
-                          type: "expense",
-                          categoryId: o.categoryId,
-                          obligationId: o.id,
-                          investmentId: null,
-                        })
-                      }
-                    >
-                      {t("payBill")}
-                    </button>
-                    <button
-                      className="text-button"
-                      aria-expanded={expanded === o.id}
-                      onClick={() =>
-                        setExpanded(expanded === o.id ? null : o.id)
-                      }
-                    >
-                      {t("history")}
-                    </button>
-                    <button
-                      className="icon"
-                      aria-label={`${t("editBill")}: ${o.title}`}
-                      disabled={saving}
-                      onClick={() => {
-                        setError("");
-                        setBill({
-                          id: o.id,
-                          title: o.title,
-                          kind: o.kind,
-                          amount: amountText(o.totalCents),
-                          dueDate: o.dueDate,
-                          categoryId: o.categoryId ?? "",
-                          months: 1,
-                        });
-                      }}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      className="icon"
-                      aria-label={`${t("remove")}: ${o.title}`}
-                      disabled={saving}
-                      onClick={() => remove(o.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                  {historyPanel(o.id)}
-                </article>
-              );
-            })}
-          </div>
+                  </dl>
+                  {!group.bills.length && (
+                    <p className="muted">{t("emptyWeek")}</p>
+                  )}
+                </>
+              )}
+              <div className="obligation-grid">
+                {group.bills.map((o) => {
+                  const status =
+                    o.remainingCents === 0
+                      ? "paid"
+                      : o.paidCents > 0
+                        ? "partial"
+                        : "pending";
+                  const isOverdue = o.remainingCents > 0 && o.dueDate < today;
+                  return (
+                    <article className="card obligation-card" key={o.id}>
+                      <div className="obligation-heading">
+                        <div>
+                          <small>
+                            {t(o.kind)} ·{" "}
+                            {DateTime.fromISO(o.dueDate).toFormat(dateFormat)}
+                          </small>
+                          <h3>{o.title}</h3>
+                        </div>
+                        <span
+                          className={`payment-status ${isOverdue ? "overdue" : status}`}
+                        >
+                          {isOverdue ? `${t("overdue")} · ` : ""}
+                          {t(status)}
+                        </span>
+                      </div>
+                      <div className="bill-values">
+                        <div>
+                          <small>{t("plannedTotal")}</small>
+                          <strong>{money(o.totalCents)}</strong>
+                        </div>
+                        <div>
+                          <small>{t("paidTotal")}</small>
+                          <strong>{money(o.paidCents)}</strong>
+                        </div>
+                        <div>
+                          <small>{t("remaining")}</small>
+                          <strong>{money(o.remainingCents)}</strong>
+                        </div>
+                      </div>
+                      <progress
+                        value={o.paidCents}
+                        max={o.totalCents}
+                        aria-label={`${o.title}: ${t("paidTotal")}`}
+                      />
+                      <div className="obligation-actions">
+                        <button
+                          className="secondary"
+                          disabled={saving || o.remainingCents === 0}
+                          onClick={() =>
+                            onDraft({
+                              description: o.title,
+                              amount: amountText(o.remainingCents),
+                              date: today,
+                              type: "expense",
+                              categoryId: o.categoryId,
+                              obligationId: o.id,
+                              investmentId: null,
+                            })
+                          }
+                        >
+                          {t("payBill")}
+                        </button>
+                        <button
+                          className="text-button"
+                          aria-expanded={expanded === o.id}
+                          onClick={() =>
+                            setExpanded(expanded === o.id ? null : o.id)
+                          }
+                        >
+                          {t("history")}
+                        </button>
+                        <button
+                          className="icon"
+                          aria-label={`${t("editBill")}: ${o.title}`}
+                          disabled={saving}
+                          onClick={() => {
+                            setError("");
+                            setBill({
+                              id: o.id,
+                              title: o.title,
+                              kind: o.kind,
+                              amount: amountText(o.totalCents),
+                              dueDate: o.dueDate,
+                              categoryId: o.categoryId ?? "",
+                              months: 1,
+                              weeks: 4,
+                              repeat: "once",
+                            });
+                          }}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          className="icon"
+                          aria-label={`${t("remove")}: ${o.title}`}
+                          disabled={saving}
+                          onClick={() => remove(o.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      {historyPanel(o.id)}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </>
       ) : (
         <>
@@ -547,6 +655,10 @@ export default function FinanceManagement({
                     setBill({
                       ...bill,
                       kind: e.target.value as BillForm["kind"],
+                      repeat:
+                        e.target.value !== "fixed" && bill.repeat === "monthly"
+                          ? "once"
+                          : bill.repeat,
                     })
                   }
                 >
@@ -596,22 +708,96 @@ export default function FinanceManagement({
                 </select>
               </label>
             </div>
-            {!bill.id && bill.kind === "fixed" && (
-              <label>
-                {t("repeatMonths")}
-                <input
-                  type="number"
-                  min={1}
-                  max={24}
-                  required
-                  value={bill.months}
-                  onChange={(e) =>
-                    setBill({ ...bill, months: Number(e.target.value) })
-                  }
-                />
-              </label>
+            <label>
+              {t("dueWeek")}
+              <select
+                disabled={!bill.dueDate}
+                value={String(Math.ceil(Number(bill.dueDate.slice(-2)) / 7))}
+                onChange={(e) => {
+                  const chosen = financeWeeks(
+                    bill.dueDate.slice(0, 7),
+                    [],
+                  ).find((w) => w.number === Number(e.target.value));
+                  if (chosen) setBill({ ...bill, dueDate: chosen.from });
+                }}
+              >
+                {financeWeeks(bill.dueDate.slice(0, 7), []).map((w) => (
+                  <option value={w.number} key={w.number}>
+                    {t("financeWeek")} {w.number} ·{" "}
+                    {DateTime.fromISO(w.from).toFormat(dateFormat)} –{" "}
+                    {DateTime.fromISO(w.to).toFormat(dateFormat)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="finance-note">{t("dueWeekHint")}</p>
+            {!bill.id && (
+              <>
+                <label>
+                  {t("billRepeat")}
+                  <select
+                    value={bill.repeat}
+                    onChange={(e) =>
+                      setBill({
+                        ...bill,
+                        repeat: e.target.value as BillForm["repeat"],
+                      })
+                    }
+                  >
+                    <option value="once">{t("repeatOnce")}</option>
+                    <option value="weekly">{t("repeatWeekly")}</option>
+                    {bill.kind === "fixed" && (
+                      <option value="monthly">{t("repeatMonthly")}</option>
+                    )}
+                  </select>
+                </label>
+                {bill.repeat !== "once" && (
+                  <label>
+                    {t(
+                      bill.repeat === "weekly" ? "repeatWeeks" : "repeatMonths",
+                    )}
+                    <input
+                      type="number"
+                      min={1}
+                      max={bill.repeat === "weekly" ? 52 : 24}
+                      required
+                      value={
+                        bill.repeat === "weekly" ? bill.weeks : bill.months
+                      }
+                      onChange={(e) =>
+                        setBill({
+                          ...bill,
+                          [bill.repeat === "weekly" ? "weeks" : "months"]:
+                            Number(e.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                )}
+                {bill.repeat !== "once" && (
+                  <div className="recurrence-preview">
+                    <strong>
+                      {t("recurrenceTotal")}:{" "}
+                      {money(
+                        (parseAmount(bill.amount) ?? 0) * duePreview.length,
+                      )}
+                    </strong>
+                    <p>
+                      {t("duePreview")}: {duePreview.join(" · ")}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
-            <p className="finance-note">{t("repeatHint")}</p>
+            <p className="finance-note">
+              {t(
+                bill.repeat === "weekly"
+                  ? "weeklyRepeatHint"
+                  : bill.repeat === "monthly"
+                    ? "repeatHint"
+                    : "singleBillHint",
+              )}
+            </p>
             {error && (
               <p className="error" role="alert">
                 {error}

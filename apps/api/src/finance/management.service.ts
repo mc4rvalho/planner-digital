@@ -57,6 +57,7 @@ export class FinanceManagementService {
     input: ObligationInput,
     id?: string,
     months = 1,
+    weeks = 1,
   ) {
     return this.mutate(userId, async (c) => {
       if (
@@ -101,12 +102,13 @@ export class FinanceManagementService {
         );
         return [{ id }];
       }
-      const seriesId = months > 1 ? randomUUID() : null;
+      const count = Math.max(months, weeks);
+      const seriesId = count > 1 ? randomUUID() : null;
       const result = [];
-      for (let month = 0; month < months; month++) {
+      for (let occurrence = 0; occurrence < count; occurrence++) {
         const nextId = randomUUID();
-        const due = DateTime.fromISO(input.dueDate)
-          .plus({ months: month })
+        const due = DateTime.fromISO(input.dueDate, { zone: "UTC" })
+          .plus(weeks > 1 ? { weeks: occurrence } : { months: occurrence })
           .toISODate();
         await c.query(
           "INSERT INTO finance_obligations(id,user_id,title,kind,total_cents,due_on,category_id,series_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",

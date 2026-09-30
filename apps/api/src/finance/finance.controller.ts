@@ -46,6 +46,7 @@ export class FinanceController {
       input,
       undefined,
       input.months,
+      input.weeks,
     );
   }
   @Patch("obligations/:id") editObligation(

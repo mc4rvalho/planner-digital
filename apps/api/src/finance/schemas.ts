@@ -33,9 +33,13 @@ export const obligationSchema = z
 export const obligationCreateSchema = obligationSchema
   .extend({
     months: z.number().int().min(1).max(24).default(1),
+    weeks: z.number().int().min(1).max(52).default(1),
   })
   .refine((d) => d.months === 1 || d.kind === "fixed", {
-    message: "Only fixed bills may repeat",
+    message: "Only fixed bills may repeat monthly",
+  })
+  .refine((d) => d.months === 1 || d.weeks === 1, {
+    message: "Choose weekly or monthly repetition, not both",
   });
 export const investmentSchema = z
   .object({

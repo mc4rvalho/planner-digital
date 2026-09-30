@@ -1,4 +1,52 @@
 const copy = {
+  dueWeek: ["Semana do vencimento", "Due week", "Semana del vencimiento"],
+  dueWeekHint: [
+    "Escolher uma semana sugere seu primeiro dia. Ajuste a data de vencimento se necessário.",
+    "Choosing a week suggests its first day. Adjust the due date if needed.",
+    "Elegir una semana sugiere su primer día. Ajusta el vencimiento si es necesario.",
+  ],
+  singleBillHint: [
+    "O valor é desta cobrança. Pagamentos parciais reduzem seu saldo. Edições afetam somente esta conta.",
+    "Amount is for this bill. Partial payments reduce its balance. Edits affect only this bill.",
+    "Importe de esta cuenta. Los pagos parciales reducen su saldo. Los cambios afectan solo a esta cuenta.",
+  ],
+  weeklyView: ["Por semana", "By week", "Por semana"],
+  listView: ["Lista", "List", "Lista"],
+  financeWeek: ["Semana", "Week", "Semana"],
+  weeklyHint: [
+    "Semanas do mês: dias 1–7, 8–14, 15–21, 22–28 e 29 até o fim. As contas são agrupadas pelo vencimento, incluindo pagamentos feitos em outras datas.",
+    "Month weeks: days 1–7, 8–14, 15–21, 22–28 and 29 through month-end. Bills are grouped by due date, including payments made on other dates.",
+    "Semanas del mes: días 1–7, 8–14, 15–21, 22–28 y 29 hasta fin de mes. Las cuentas se agrupan por vencimiento, incluidos pagos en otras fechas.",
+  ],
+  emptyWeek: [
+    "Nenhuma conta prevista nesta semana.",
+    "No bills planned this week.",
+    "No hay cuentas previstas esta semana.",
+  ],
+  billRepeat: ["Repetição", "Repeat", "Repetición"],
+  repeatOnce: ["Somente esta conta", "Only this bill", "Solo esta cuenta"],
+  repeatWeekly: ["A cada semana", "Every week", "Cada semana"],
+  repeatMonthly: ["A cada mês", "Every month", "Cada mes"],
+  repeatWeeks: [
+    "Gerar quantas semanas?",
+    "How many weeks?",
+    "¿Cuántas semanas generar?",
+  ],
+  weeklyRepeatHint: [
+    "O valor é por cobrança, a cada 7 dias a partir do primeiro vencimento. Pode continuar no próximo mês. Cada cobrança tem seu próprio saldo; editar uma não altera as demais.",
+    "Amount is per bill, every 7 days from the first due date. It may continue into the next month. Each bill has its own balance; editing one does not change the others.",
+    "Importe por cuenta, cada 7 días desde el primer vencimiento. Puede continuar el mes siguiente. Cada cuenta tiene su saldo; editar una no cambia las demás.",
+  ],
+  recurrenceTotal: [
+    "Total das cobranças",
+    "Total of bills",
+    "Total de las cuentas",
+  ],
+  duePreview: [
+    "Vencimentos que serão criados",
+    "Due dates to create",
+    "Vencimientos que se crearán",
+  ],
   financeOverview: ["Fluxo de caixa", "Cash flow", "Flujo de caja"],
   bills: ["Contas e dívidas", "Bills and debts", "Cuentas y deudas"],
   investments: ["Investimentos", "Investments", "Inversiones"],

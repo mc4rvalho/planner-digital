@@ -81,3 +81,16 @@ Para chamadas Gemini, `GEMINI_MODEL` é o modelo principal e `GEMINI_FALLBACK_MO
 - Dashboard preserva income/expense/balance como fluxo de caixa e também fornece invested/redeemed/spending (saídas menos aportes).
 
 A migração 2 adiciona tabelas e vínculos sem alterar valores de lançamentos existentes. Testes: `tests/finance-management.integration.cjs`, `tests/management.e2e.ts`, `tests/routine.test.ts` e `tests/ai-request.test.ts`.
+
+
+## Planejamento por semana
+
+Em **Finanças → Contas e dívidas → Por semana**, as cobranças do mês selecionado são agrupadas pelo vencimento: semana 1 (dias 1–7), 2 (8–14), 3 (15–21), 4 (22–28) e 5 (29 até o fim, quando existir). Os intervalos aparecem na tela, incluindo semanas vazias. Fevereiro com 28 dias tem quatro semanas. Cada semana mostra previsto, pago e restante. Pagamentos vinculados contam independentemente da data em que ocorreram; esta visão organiza compromissos, não extratos semanais de caixa. A opção Lista preserva os filtros de todas as contas e todas em aberto.
+
+Ao criar ou editar uma conta, o seletor de semana sugere o primeiro dia daquele intervalo; ajuste o vencimento para o dia desejado. Alterar o vencimento move a conta de semana, mantendo seu histórico e saldo.
+
+Para Adias: crie uma conta de R$ 200, primeiro vencimento 01/10, repetição **A cada semana**, quantidade **4**. Serão criadas cobranças em 01/10, 08/10, 15/10 e 22/10, totalizando R$ 800. Água e energia em 01/10 aparecem na semana 1; Thaís em 15/10 aparece na semana 3. A prévia mostra datas e total antes de salvar. A repetição ocorre a cada sete dias e pode atravessar meses ou anos; não reinicia automaticamente no dia 1. Cada cobrança é independente e pode receber pagamentos parciais. Não é feito rateio de uma dívida já existente nem duplicação de pagamentos.
+
+`POST /finance/obligations` aceita `weeks` inteiro entre 1 e 52 (padrão 1), para qualquer natureza. O valor é por cobrança. `months` continua compatível (1–24, repetição mensal apenas para gastos fixos); não se aceita `weeks > 1` junto de `months > 1`. A criação inteira é atômica. Editar ou excluir uma ocorrência não altera as demais. Não há nova migração ou modificação automática de contas existentes.
+
+Testes adicionais: `tests/finance-weeks.test.ts`, caso semanal em `tests/finance-management.integration.cjs` e fluxo de quatro cobranças em `tests/management.e2e.ts` para desktop e mobile.
