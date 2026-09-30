@@ -1,3 +1,4 @@
+import { parseExplicitRoutine } from "./explicit-routine";
 import { requestGemini } from "../ai/request";
 import {
   BadRequestException,
@@ -136,6 +137,38 @@ export class PlannerService {
     preferences: Record<string, string>,
     existing: unknown[],
   ) {
+    const explicit = parseExplicitRoutine(
+      text,
+      referenceDate,
+      preferences.timezone,
+    );
+    if (explicit) {
+      const occupied = z
+        .array(
+          z.object({
+            title: z.string(),
+            start: z.coerce.date(),
+            end: z.coerce.date(),
+            category: z.string().optional(),
+          }),
+        )
+        .safeParse(existing);
+      if (
+        explicit.some((event, i) =>
+          explicit.slice(i + 1).some((other) => hasOverlap(event, other)),
+        ) ||
+        (occupied.success &&
+          explicit.some((event) =>
+            occupied.data.some(
+              (other) =>
+                Date.parse(event.start) < other.end.getTime() &&
+                Date.parse(event.end) > other.start.getTime(),
+            ),
+          ))
+      )
+        throw new ConflictException("EVENT_CONFLICT");
+      return { events: explicit, source: "explicit" };
+    }
     if (!env.GEMINI_API_KEY)
       throw new ServiceUnavailableException("AI_NOT_CONFIGURED");
     const schema = {
@@ -198,6 +231,9 @@ export class PlannerService {
               responseJsonSchema: schema,
             },
           }),
+        },
+        {
+          fallbackUrl: `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_FALLBACK_MODEL}:generateContent`,
         },
       );
       if (!res.ok) throw new Error("Provider error");

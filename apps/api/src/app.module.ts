@@ -1,3 +1,4 @@
+import { FinanceManagementService } from "./finance/management.service";
 import { FinanceController } from "./finance/finance.controller";
 import { FinanceService } from "./finance/finance.service";
 import { Controller, Get, Module } from "@nestjs/common";
@@ -25,6 +26,7 @@ class HealthController {
   controllers: [HealthController, PlannerController, FinanceController],
   providers: [
     FinanceService,
+    FinanceManagementService,
     PlannerService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],

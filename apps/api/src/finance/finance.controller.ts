@@ -1,3 +1,9 @@
+import { FinanceManagementService } from "./management.service";
+import {
+  obligationSchema,
+  obligationCreateSchema,
+  investmentSchema,
+} from "./schemas";
 import {
   BadRequestException,
   Body,
@@ -26,7 +32,74 @@ function parse<T>(schema: z.ZodType<T>, input: unknown) {
 @Controller("finance")
 @UseGuards(JwtAuthGuard)
 export class FinanceController {
-  constructor(private readonly finance: FinanceService) {}
+  constructor(
+    private readonly finance: FinanceService,
+    private readonly management: FinanceManagementService,
+  ) {}
+  @Get("obligations") obligations(@Req() r: AuthRequest) {
+    return this.management.obligations(r.user.id);
+  }
+  @Post("obligations") obligation(@Req() r: AuthRequest, @Body() b: unknown) {
+    const input = parse(obligationCreateSchema, b);
+    return this.management.obligation(
+      r.user.id,
+      input,
+      undefined,
+      input.months,
+    );
+  }
+  @Patch("obligations/:id") editObligation(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() b: unknown,
+  ) {
+    return this.management.obligation(
+      r.user.id,
+      parse(obligationSchema, b),
+      id,
+    );
+  }
+  @Delete("obligations/:id") removeObligation(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.management.remove(r.user.id, id, "obligation");
+  }
+  @Get("investments") investments(@Req() r: AuthRequest) {
+    return this.management.investments(r.user.id);
+  }
+  @Post("investments") investment(@Req() r: AuthRequest, @Body() b: unknown) {
+    return this.management.investment(r.user.id, parse(investmentSchema, b));
+  }
+  @Patch("investments/:id") editInvestment(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() b: unknown,
+  ) {
+    return this.management.investment(
+      r.user.id,
+      parse(investmentSchema, b),
+      id,
+    );
+  }
+  @Delete("investments/:id") removeInvestment(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.management.remove(r.user.id, id, "investment");
+  }
+  @Get("obligations/:id/transactions") obligationHistory(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.management.history(r.user.id, id, "obligation");
+  }
+  @Get("investments/:id/transactions") investmentHistory(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.management.history(r.user.id, id, "investment");
+  }
   @Get() dashboard(
     @Req() r: AuthRequest,
     @Query("from") from: string,

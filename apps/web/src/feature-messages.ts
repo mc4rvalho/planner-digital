@@ -1,5 +1,7 @@
+import { financialMessages } from "./financial-messages";
 export const featureMessages = {
   "pt-BR": {
+    ...financialMessages["pt-BR"],
     profile: "Meu perfil",
     finance: "Finanças",
     editEvent: "Editar evento",
@@ -79,6 +81,7 @@ export const featureMessages = {
     financeSaved: "Lançamentos salvos.",
   },
   "en-US": {
+    ...financialMessages["en-US"],
     profile: "My profile",
     finance: "Finances",
     editEvent: "Edit event",
@@ -155,6 +158,7 @@ export const featureMessages = {
     financeSaved: "Transactions saved.",
   },
   "es-ES": {
+    ...financialMessages["es-ES"],
     profile: "Mi perfil",
     finance: "Finanzas",
     editEvent: "Editar evento",

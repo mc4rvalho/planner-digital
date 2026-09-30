@@ -21,6 +21,10 @@ const schema = z.object({
     z.string().email().optional(),
   ),
   GEMINI_API_KEY: z.string().optional(),
+  GEMINI_FALLBACK_MODEL: z
+    .string()
+    .regex(/^[a-zA-Z0-9.\-]+$/)
+    .default("gemini-3.5-flash-lite"),
   GEMINI_MODEL: z
     .string()
     .regex(/^[a-zA-Z0-9.\-]+$/)

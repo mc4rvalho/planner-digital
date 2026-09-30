@@ -72,7 +72,9 @@ export default function App() {
   );
   useEffect(() => {
     function openResetLink() {
-      const value = new URLSearchParams(window.location.hash.slice(1)).get("reset");
+      const value = new URLSearchParams(window.location.hash.slice(1)).get(
+        "reset",
+      );
       if (!value) return;
       setToken("");
       setUser(null);
@@ -84,7 +86,11 @@ export default function App() {
       setError("");
       setNotice("");
       setMobile(false);
-      history.replaceState(null, "", window.location.pathname + window.location.search);
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
     }
     openResetLink();
     window.addEventListener("hashchange", openResetLink);
@@ -216,7 +222,7 @@ export default function App() {
     setBusy(true);
     setError("");
     try {
-      const result = await request<{ events: Draft[] }>(
+      const result = await request<{ events: Draft[]; source?: string }>(
         "planner/propose",
         token,
         "POST",
@@ -224,6 +230,7 @@ export default function App() {
       );
       setEditingId(null);
       setDrafts(result.events);
+      setNotice(result.source === "explicit" ? t("explicitRoutine") : "");
     } catch (e) {
       report(e);
     } finally {
@@ -231,6 +238,7 @@ export default function App() {
     }
   }
   function addEvent() {
+    setNotice("");
     setEditingId(null);
     const start = date.set({ hour: 9, minute: 0, second: 0, millisecond: 0 });
     setError("");
@@ -1137,6 +1145,7 @@ export default function App() {
             </span>
             <h2>{t(editingId ? "editEvent" : "review")}</h2>
             <p className="muted">{t("reviewSub")}</p>
+            {notice === t("explicitRoutine") && !editingId && <p className="success" role="status">{notice}</p>}
             <div className="draft-list">
               {drafts.map((d, i) => (
                 <div className="draft" key={i}>

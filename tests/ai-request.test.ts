@@ -121,3 +121,25 @@ test("network errors retry without leaking exception details", async () => {
   assert.equal(attempts, 2);
   assert.ok(warnings.every((message) => !message.includes("secret")));
 });
+
+test("a configured alternative is used after provider overload with the same body and deadline", async () => {
+  const calls: string[] = [];
+  const signal = AbortSignal.timeout(1000);
+  const result = await requestGemini(
+    url,
+    { body: "same-input", signal },
+    {
+      fallbackUrl: "https://provider.invalid/alternative",
+      fetch: async (input, init) => {
+        calls.push(String(input));
+        assert.equal(init?.body, "same-input");
+        assert.equal(init?.signal, signal);
+        return new Response("", { status: calls.length === 1 ? 503 : 200 });
+      },
+      wait: async () => {},
+      warn: () => {},
+    },
+  );
+  assert.equal(result.status, 200);
+  assert.deepEqual(calls, [url, "https://provider.invalid/alternative"]);
+});

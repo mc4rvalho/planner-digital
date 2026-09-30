@@ -14,7 +14,7 @@ A primeira publicação foi realizada pelas APIs das plataformas, usando as conf
 
 SMTP não foi enviado: sua configuração ficou a cargo do proprietário. O Render gratuito bloqueia as portas SMTP 25, 465 e 587; usar SMTP nessas portas exige mudar o plano da API, ou adaptar o aplicativo para envio por HTTPS. O PostgreSQL gratuito expira em 30 dias e não tem backups: escolha um plano persistente antes de depender do sistema para dados reais. Consulte as [limitações do Render](https://render.com/docs/free).
 
-Os deploys iniciais estão publicados, mas o CI/CD descrito abaixo ainda depende de cadastrar os dois Deploy Hooks no ambiente GitHub `production`. Até isso ser feito, novos pushes validam o código, mas a etapa de deploy falha por falta dos secrets.
+Os Deploy Hooks foram cadastrados pelo proprietário no ambiente GitHub `production`. A reexecução do workflow foi bem-sucedida; o Render confirmou uma nova publicação. Novos pushes em `main` passam pela verificação antes de solicitar os deploys.
 
 ## 1. GitHub
 
@@ -79,3 +79,5 @@ Em 29/09/2026 foi reproduzida uma resposta HTTP 503 do Gemini `gemini-3.8-flash`
 Planejamento e finanças fazem até três tentativas em falhas temporárias de rede ou HTTP 408/429/500/502/503/504, com espera exponencial, jitter e respeito a Retry-After. O prazo total continua sendo 45 segundos. Erros permanentes (por exemplo 400/401/403), validação da resposta e operações de gravação não são repetidos. Persistindo a indisponibilidade, a API retorna `AI_UNAVAILABLE` e o usuário pode tentar depois. Logs `[Gemini]` registram somente status/tentativa ou falha de rede/timeout, sem chave, texto do usuário ou corpo da resposta do provedor.
 
 Referência: [tratamento de erros do Gemini](https://ai.google.dev/gemini-api/docs/troubleshooting).
+
+`GEMINI_FALLBACK_MODEL` permite configurar um modelo alternativo para indisponibilidade temporária; padrão `gemini-3.5-flash-lite`. Rotinas diárias com horários explícitos são reconhecidas sem depender do provedor. Consulte [controle financeiro e IA](account-and-finance.md).

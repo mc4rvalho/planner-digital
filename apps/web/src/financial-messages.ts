@@ -1,0 +1,163 @@
+const copy = {
+  financeOverview: ["Fluxo de caixa", "Cash flow", "Flujo de caja"],
+  bills: ["Contas e dívidas", "Bills and debts", "Cuentas y deudas"],
+  investments: ["Investimentos", "Investments", "Inversiones"],
+  newBill: ["Nova conta", "New bill", "Nueva cuenta"],
+  editBill: ["Editar conta", "Edit bill", "Editar cuenta"],
+  billName: ["Nome da conta", "Bill name", "Nombre de la cuenta"],
+  billKind: ["Natureza", "Kind", "Naturaleza"],
+  fixed: ["Gasto fixo", "Fixed expense", "Gasto fijo"],
+  variable: ["Gasto variável", "Variable expense", "Gasto variable"],
+  debt: ["Dívida", "Debt", "Deuda"],
+  totalDue: [
+    "Valor previsto (R$)",
+    "Planned amount (BRL)",
+    "Importe previsto (BRL)",
+  ],
+  dueDate: ["Vencimento", "Due date", "Vencimiento"],
+  repeatMonths: [
+    "Gerar quantos meses?",
+    "How many months?",
+    "¿Cuántos meses generar?",
+  ],
+  repeatHint: [
+    "O valor é por mês. Até 24 cobranças; você poderá editar cada mês separadamente. Dívidas representam o total em aberto, sem cálculo automático de juros.",
+    "Amount is per month. Up to 24 bills; each month can be edited separately. Debts represent the outstanding total, with no automatic interest calculation.",
+    "Importe por mes. Hasta 24 cuentas; cada mes se edita por separado. Las deudas representan el total pendiente, sin cálculo automático de intereses.",
+  ],
+  plannedTotal: ["Total previsto", "Planned total", "Total previsto"],
+  paidTotal: ["Total pago", "Total paid", "Total pagado"],
+  remaining: ["Falta pagar", "Remaining", "Falta pagar"],
+  paid: ["Pago", "Paid", "Pagado"],
+  partial: ["Parcial", "Partial", "Parcial"],
+  pending: ["Em aberto", "Pending", "Pendiente"],
+  overdue: ["Vencido", "Overdue", "Vencido"],
+  payBill: ["Registrar pagamento", "Record payment", "Registrar pago"],
+  billScope: ["Mostrar contas", "Show bills", "Mostrar cuentas"],
+  dueThisMonth: ["Vencimento neste mês", "Due this month", "Vencen este mes"],
+  allOpen: ["Todas em aberto", "All outstanding", "Todas pendientes"],
+  allBills: ["Todas as contas", "All bills", "Todas las cuentas"],
+  noBills: [
+    "Cadastre suas contas para acompanhar o que já pagou e o que falta.",
+    "Add bills to track what you have paid and what remains.",
+    "Añade cuentas para seguir lo pagado y lo pendiente.",
+  ],
+  billSummaryHint: [
+    "Totais das contas filtradas. Pagamentos incluem todas as datas; o fluxo de caixa considera a data de cada pagamento.",
+    "Totals for filtered bills. Payments include all dates; cash flow uses each payment date.",
+    "Totales de las cuentas filtradas. Los pagos incluyen todas las fechas; el flujo de caja usa la fecha de cada pago.",
+  ],
+  removeBillConfirm: [
+    "Excluir esta conta? Contas com pagamentos devem manter seu histórico.",
+    "Delete this bill? Bills with payments must keep their history.",
+    "¿Eliminar esta cuenta? Las cuentas pagadas deben conservar su historial.",
+  ],
+  linkedBill: [
+    "Vincular a uma conta",
+    "Link to a bill",
+    "Vincular a una cuenta",
+  ],
+  noLink: ["Sem vínculo", "No link", "Sin vínculo"],
+  linkedInvestment: [
+    "Vincular a um investimento",
+    "Link to an investment",
+    "Vincular a una inversión",
+  ],
+  paymentHint: [
+    "Informe somente o valor pago agora. O saldo restante será recalculado ao salvar.",
+    "Enter only the amount paid now. The remaining balance updates when saved.",
+    "Introduce solo el importe pagado ahora. El saldo pendiente se actualiza al guardar.",
+  ],
+  overpayment: [
+    "O pagamento ultrapassa o saldo restante da conta.",
+    "This payment exceeds the bill's remaining balance.",
+    "El pago supera el saldo pendiente de la cuenta.",
+  ],
+  belowPaid: [
+    "O valor previsto não pode ser menor que o valor já pago.",
+    "The planned amount cannot be less than the amount already paid.",
+    "El importe previsto no puede ser inferior al ya pagado.",
+  ],
+  linkedHistory: [
+    "Este item tem lançamentos vinculados. Exclua ou desvincule esses lançamentos antes de removê-lo.",
+    "This item has linked transactions. Remove or unlink those transactions before deleting it.",
+    "Este elemento tiene movimientos vinculados. Elimínalos o desvincúlalos antes de borrarlo.",
+  ],
+  insufficientInvestment: [
+    "Esse resgate ou alteração deixaria o investimento com saldo negativo em alguma data.",
+    "This withdrawal or edit would leave a negative investment balance on a date.",
+    "Este rescate o cambio dejaría la inversión con saldo negativo en alguna fecha.",
+  ],
+  newInvestment: ["Novo investimento", "New investment", "Nueva inversión"],
+  editInvestment: [
+    "Editar investimento",
+    "Edit investment",
+    "Editar inversión",
+  ],
+  investmentName: [
+    "Nome do investimento",
+    "Investment name",
+    "Nombre de la inversión",
+  ],
+  investmentTarget: [
+    "Meta de aportes (R$, opcional)",
+    "Contribution target (BRL, optional)",
+    "Meta de aportes (BRL, opcional)",
+  ],
+  contribution: ["Aporte", "Contribution", "Aporte"],
+  redemption: ["Resgate", "Withdrawal", "Rescate"],
+  contributions: ["Aportes", "Contributions", "Aportes"],
+  redemptions: ["Resgates", "Withdrawals", "Rescates"],
+  investedBalance: [
+    "Saldo de aportes",
+    "Net contributions",
+    "Saldo de aportes",
+  ],
+  investmentsHint: [
+    "Controle manual de aportes e resgates do capital, sem cotações ou rentabilidade. Não representa valor de mercado. Aportes saem do caixa e resgates entram; não são despesas de consumo.",
+    "Manual capital contributions and withdrawals, without quotes or returns. This is not market value. Contributions leave cash and withdrawals enter cash; they are not consumption expenses.",
+    "Control manual de aportes y rescates del capital, sin cotizaciones ni rendimientos. No es valor de mercado. Los aportes salen de caja y los rescates entran; no son gastos de consumo.",
+  ],
+  noInvestments: [
+    "Crie um investimento para acompanhar seus aportes e metas.",
+    "Create an investment to track contributions and targets.",
+    "Crea una inversión para seguir aportes y metas.",
+  ],
+  history: ["Histórico", "History", "Historial"],
+  saveBill: ["Salvar conta", "Save bill", "Guardar cuenta"],
+  saveInvestment: [
+    "Salvar investimento",
+    "Save investment",
+    "Guardar inversión",
+  ],
+  financeUpdated: [
+    "Controle financeiro atualizado.",
+    "Financial records updated.",
+    "Control financiero actualizado.",
+  ],
+  cashFlowHint: [
+    "Entradas e saídas incluem aportes e resgates. Valores previstos só entram no caixa quando registrados como pagos.",
+    "Cash inflows and outflows include investment movements. Planned amounts affect cash only when recorded as paid.",
+    "Las entradas y salidas incluyen inversiones. Los importes previstos afectan a caja solo cuando se registran como pagados.",
+  ],
+  explicitRoutine: [
+    "Horários explícitos reconhecidos para a data de referência. Confira os eventos antes de salvar; não foi necessário usar IA.",
+    "Explicit times recognized for the reference date. Review before saving; AI was not needed.",
+    "Horarios explícitos reconocidos para la fecha de referencia. Revisa antes de guardar; no fue necesaria la IA.",
+  ],
+  financeLinked: ["Pagamento vinculado", "Linked payment", "Pago vinculado"],
+  financeTextHint: [
+    "Ex.: Hoje paguei R$ 300 da energia de R$ 400; faltam R$ 100. Cadastre a conta antes para vincular o pagamento e confira o vínculo na revisão.",
+    "E.g. Today I paid BRL 300 of the BRL 400 electricity bill; BRL 100 remains. Create the bill first, then review the payment link.",
+    "Ej.: Hoy pagué BRL 300 de la electricidad de BRL 400; faltan BRL 100. Crea la cuenta primero y revisa el vínculo del pago.",
+  ],
+} as const;
+const at = (index: number) =>
+  Object.fromEntries(
+    Object.entries(copy).map(([key, values]) => [key, values[index]]),
+  ) as { [K in keyof typeof copy]: string };
+export const financialMessages = {
+  "pt-BR": at(0),
+  "en-US": at(1),
+  "es-ES": at(2),
+};

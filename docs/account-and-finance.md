@@ -46,3 +46,38 @@ A IA recebe somente o texto enviado, a data de referência, o idioma e as catego
 `database/migrations.ts` contém migrações versionadas executadas com transação e advisory lock. A migração 1 adiciona foto, versão de autenticação, recuperação de senha e tabelas financeiras sem apagar dados existentes. A tabela `schema_migrations` impede reaplicações.
 
 `tests/features.integration.cjs` cobre perfil, edição e conflitos, propriedade de categorias/lançamentos, precisão do dashboard, rollback, revogação de tokens e recuperação concorrente de uso único. O envio de e-mail e o provedor Gemini são substituídos por dublês controlados nos testes; não há mensagens externas nem consumo de chave real no CI. `tests/features.e2e.ts` percorre perfil, foto, senha, temas, categorias, lançamentos e revisão da IA em desktop/mobile; apenas a resposta da IA é simulada nesse fluxo.
+
+## Contas previstas e pagamentos parciais
+
+A aba Finanças tem três visões: Fluxo de caixa, Contas e dívidas, Investimentos.
+
+Em Contas e dívidas, cadastre o título, natureza (fixo, variável ou dívida), valor previsto, vencimento e categoria. Contas fixas podem gerar de 1 a 24 cobranças mensais; o valor informado é **por mês**. Os vencimentos são calculados a partir do dia original: uma cobrança em 31/01 gera 28/02 (ou 29 em ano bissexto) e 31/03. Edições afetam somente a cobrança selecionada; não existe repetição infinita automática. Uma dívida registra o principal total que se deseja acompanhar, sem cálculo de juros, amortização contratual ou parcelamento automático.
+
+Exemplo: Energia prevista em R$ 400. Ao registrar um pagamento de R$ 300, o controle mostra R$ 300 pagos, R$ 100 restantes e estado Parcial. O fluxo de caixa registra apenas R$ 300 de saída, na data do pagamento. Ao pagar os R$ 100 restantes, a conta passa a Pago. O estado Vencido usa o vencimento e a data atual no fuso do usuário. Os totais das contas seguem o filtro de vencimento; pagamentos vinculados são considerados em todas as datas. O caixa segue o mês da movimentação. Por isso os totais das duas visões podem legitimamente diferir.
+
+O histórico permite editar ou excluir pagamentos. O saldo é calculado a partir dos lançamentos; não há contador separado que possa ficar desatualizado. Operações concorrentes são serializadas por usuário. O servidor impede pagamentos acima do total, reduzir o previsto abaixo do já pago e excluir uma conta com histórico vinculado. Para corrigir um cadastro assim, primeiro edite, exclua ou desvincule os lançamentos. Excluir uma categoria apenas remove o vínculo; mantém contas e pagamentos.
+
+## Digitação de pagamentos
+
+Cadastre a conta antes de usar o campo de texto: “Hoje paguei R$ 300 da energia de R$ 400; ainda faltam R$ 100”. O Gemini recebe as contas em aberto e propõe **somente o valor pago**, com o vínculo quando puder identificá-lo. Contas com nomes ambíguos exigem escolher o vínculo na revisão. Valores previstos e saldos pendentes não devem virar outra saída de caixa. Confira o valor e os seletores “Vincular a uma conta” / “Vincular a um investimento” antes de confirmar. Nenhuma sugestão é salva automaticamente. O servidor revalida propriedade e saldo no momento de salvar, mesmo que uma sugestão tenha ficado desatualizada.
+
+## Investimentos
+
+Cadastre um investimento e uma meta opcional. Aportes são saídas de caixa vinculadas ao investimento; resgates são entradas. O saldo exibido é **aportes menos resgates de capital**, não valor de mercado. Não há cotações, rentabilidade, impostos, integração bancária ou recomendação de investimento. O histórico é manual. O servidor não permite deixar saldo de capital negativo, inclusive ao editar datas ou excluir aportes que já sustentam um resgate. Movimentações no mesmo dia são consolidadas por data; não há horário intradiário.
+
+## Rotinas explícitas e indisponibilidade da IA
+
+Rotinas em português com uma atividade e intervalo explícito por linha (por exemplo “Rodar das 05h30 até às 12h.”) são interpretadas diretamente para a data de referência e fuso selecionados. Todas as linhas devem ser reconhecidas. Essa leitura não depende de Gemini, não salva automaticamente e informa ao usuário que IA não foi necessária. Não interpreta recorrência, datas implícitas ou intervalos que atravessam a meia-noite: esses casos seguem para a IA. Conflitos de horário são rejeitados.
+
+Para chamadas Gemini, `GEMINI_MODEL` é o modelo principal e `GEMINI_FALLBACK_MODEL` é a alternativa (padrão `gemini-3.5-flash-lite`, validado com uma chamada real). Em HTTP 500/502/503/504 do principal, a próxima tentativa usa a alternativa, com o mesmo conteúdo, validação e prazo total de 45 segundos. Credenciais inválidas não são contornadas. Falhas persistentes ainda podem impedir geração. A alternativa pode produzir resultados diferentes, por isso a revisão permanece obrigatória.
+
+## Novos endpoints
+
+- `GET/POST /finance/obligations`; `PATCH/DELETE /finance/obligations/:id`.
+- `GET /finance/obligations/:id/transactions`: histórico completo da conta.
+- `GET/POST /finance/investments`; `PATCH/DELETE /finance/investments/:id`.
+- `GET /finance/investments/:id/transactions`: histórico completo do investimento.
+- Transações aceitam `obligationId` ou `investmentId` (UUID ou null), nunca ambos. Pagamentos de contas são do tipo `expense`.
+- Dashboard preserva income/expense/balance como fluxo de caixa e também fornece invested/redeemed/spending (saídas menos aportes).
+
+A migração 2 adiciona tabelas e vínculos sem alterar valores de lançamentos existentes. Testes: `tests/finance-management.integration.cjs`, `tests/management.e2e.ts`, `tests/routine.test.ts` e `tests/ai-request.test.ts`.

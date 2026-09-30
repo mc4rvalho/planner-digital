@@ -6,6 +6,7 @@ type Dependencies = {
   wait: (milliseconds: number, signal: AbortSignal) => Promise<void>;
   random: () => number;
   warn: (message: string) => void;
+  fallbackUrl?: string;
 };
 
 // Retry only the provider call: proposal validation and saving are never retried.
@@ -21,11 +22,12 @@ export async function requestGemini(
   const warn = dependencies.warn ?? ((message) => console.warn(message));
   // One shared deadline covers all attempts and waits, not 45 seconds per attempt.
   const signal = init.signal ?? AbortSignal.timeout(45000);
+  let requestUrl = url;
   for (let attempt = 1; attempt <= 3; attempt++) {
     signal.throwIfAborted();
     let response: Response;
     try {
-      response = await send(url, { ...init, signal });
+      response = await send(requestUrl, { ...init, signal });
     } catch {
       warn(
         `[Gemini] ${signal.aborted ? "timeout_or_abort" : "network_error"} attempt=${attempt}`,
@@ -41,6 +43,11 @@ export async function requestGemini(
     if (response.ok) return response;
     // Never log API keys, request text, provider bodies, or generated content.
     warn(`[Gemini] http_status=${response.status} attempt=${attempt}`);
+    if (
+      [500, 502, 503, 504].includes(response.status) &&
+      dependencies.fallbackUrl
+    )
+      requestUrl = dependencies.fallbackUrl;
     const retryAfter = response.headers.get("retry-after");
     await response.body?.cancel();
     if (!transientStatuses.has(response.status) || attempt === 3)

@@ -1,3 +1,11 @@
+import FinanceManagement from "./FinanceManagement";
+import type {
+  Category,
+  Transaction,
+  FinanceDraft as Draft,
+  Obligation,
+  Investment,
+} from "../finance-types";
 import { useEffect, useState, type FormEvent } from "react";
 import { DateTime } from "luxon";
 import {
@@ -16,21 +24,6 @@ import { ApiError, request } from "../api";
 import { messages, type Locale, type MessageKey } from "../i18n";
 import { amountText, parseAmount } from "../money";
 import Modal from "./Modal";
-type Category = { id: string; name: string; color: string };
-type Transaction = {
-  id: string;
-  description: string;
-  amountCents: number;
-  type: "income" | "expense";
-  date: string;
-  categoryId: string | null;
-  categoryName?: string | null;
-  color?: string;
-};
-type Draft = Omit<
-  Transaction,
-  "id" | "categoryName" | "color" | "amountCents"
-> & { amount: string };
 type Dashboard = {
   transactions: Transaction[];
   summary: { income: number; expense: number; balance: number; count: number };
@@ -52,6 +45,11 @@ export default function Finance({
 }) {
   const t = (k: MessageKey) => messages[locale][k];
   const now = DateTime.now().setZone(timezone);
+  const [view, setView] = useState<"overview" | "bills" | "investments">(
+    "overview",
+  );
+  const [obligations, setObligations] = useState<Obligation[]>([]),
+    [investments, setInvestments] = useState<Investment[]>([]);
   const [month, setMonth] = useState(now.toFormat("yyyy-MM")),
     [data, setData] = useState<Dashboard | null>(null),
     [categories, setCategories] = useState<Category[]>([]),
@@ -81,6 +79,15 @@ export default function Finance({
       onError(e);
       return;
     }
+    const codes: Record<string, MessageKey> = {
+      PAYMENT_EXCEEDS_BALANCE: "overpayment",
+      INVESTMENT_INSUFFICIENT: "insufficientInvestment",
+      INVALID_LINK: "error",
+    };
+    if (e instanceof ApiError && codes[e.message]) {
+      setError(t(codes[e.message]));
+      return;
+    }
     setError(
       e instanceof ApiError && e.message === "CATEGORY_EXISTS"
         ? t("categoryExists")
@@ -100,6 +107,20 @@ export default function Finance({
     setData(null);
     setError("");
     Promise.all([
+      request<Obligation[]>(
+        "finance/obligations",
+        token,
+        "GET",
+        undefined,
+        controller.signal,
+      ),
+      request<Investment[]>(
+        "finance/investments",
+        token,
+        "GET",
+        undefined,
+        controller.signal,
+      ),
       request<Dashboard>(
         `finance?from=${first.toISODate()}&to=${first.plus({ months: 1 }).toISODate()}`,
         token,
@@ -115,7 +136,9 @@ export default function Finance({
         controller.signal,
       ),
     ])
-      .then(([d, c]) => {
+      .then(([o, i, d, c]) => {
+        setObligations(o);
+        setInvestments(i);
         setData(d);
         setCategories(c);
       })
@@ -152,12 +175,26 @@ export default function Finance({
         type: tr.type,
         date: tr.date,
         categoryId: tr.categoryId,
+        obligationId: tr.obligationId ?? null,
+        investmentId: tr.investmentId ?? null,
       },
     ]);
   }
   function patch(i: number, key: keyof Draft, value: string | null) {
     setDrafts((old) =>
-      old!.map((d, n) => (n === i ? { ...d, [key]: value } : d)),
+      old!.map((d, n) => {
+        if (n !== i) return d;
+        const next = { ...d, [key]: value };
+        if (key === "obligationId" && value) {
+          next.investmentId = null;
+          next.type = "expense";
+          next.categoryId =
+            obligations.find((o) => o.id === value)?.categoryId ?? null;
+        }
+        if (key === "investmentId" && value) next.obligationId = null;
+        if (key === "type" && value === "income") next.obligationId = null;
+        return next;
+      }),
     );
   }
   async function save(e: FormEvent) {
@@ -220,6 +257,8 @@ export default function Finance({
           type: tr.type,
           date: tr.date,
           categoryId: tr.categoryId,
+          obligationId: tr.obligationId ?? null,
+          investmentId: tr.investmentId ?? null,
         })),
       );
     } catch (e) {
@@ -301,6 +340,18 @@ export default function Finance({
           {t("newTransaction")}
         </button>
       </div>
+      <div className="finance-tabs" role="group" aria-label={t("finance")}>
+        {(["overview", "bills", "investments"] as const).map((v) => (
+          <button
+            key={v}
+            className={view === v ? "active" : ""}
+            aria-pressed={view === v}
+            onClick={() => setView(v)}
+          >
+            {t(v === "overview" ? "financeOverview" : v)}
+          </button>
+        ))}
+      </div>
       {!drafts && !manage && errorBanner}
       {notice && (
         <p className="success feature-notice" role="status">
@@ -342,6 +393,7 @@ export default function Finance({
           </button>
         </div>
         <small className="privacy-note">{t("financePrivacy")}</small>
+        <p className="finance-note">{t("financeTextHint")}</p>
       </section>
       <div className="finance-toolbar">
         <div className="period-control">
@@ -385,230 +437,271 @@ export default function Finance({
           {t("manageCategories")}
         </button>
       </div>
-      <div className="stats financial-stats">
-        {(
-          [
-            { key: "income", icon: ArrowDownLeft, css: "green" },
-            { key: "expense", icon: ArrowUpRight, css: "peach" },
-            { key: "balance", icon: Wallet, css: "purple" },
-          ] as const
-        ).map(({ key, icon: Icon, css }) => (
-          <div key={key} className="stat card">
-            <span className={`stat-icon ${css}`}>
-              <Icon size={22} />
-            </span>
-            <div>
-              <small>{t(key === "balance" ? "periodBalance" : key)}</small>
-              <strong>{loading ? "—" : money(data?.summary[key] ?? 0)}</strong>
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="finance-note">{t("currencyNote")}</p>
-      {loading ? (
-        <div className="empty" role="status">
-          {t("loading")}
-        </div>
-      ) : (
+      {view === "overview" && (
         <>
-          <div className="finance-charts">
-            <section className="card feature-card">
-              <h2>{t("cashFlow")}</h2>
-              <svg
-                className="cash-chart"
-                viewBox="0 0 640 200"
-                role="img"
-                aria-label={`${t("cashFlow")}: ${t("income")} ${money(data?.summary.income ?? 0)}, ${t("expense")} ${money(data?.summary.expense ?? 0)}`}
-              >
-                <line
-                  x1="20"
-                  x2="620"
-                  y1="166"
-                  y2="166"
-                  stroke="currentColor"
-                  opacity=".12"
-                />
-                {days.map((d, i) => (
-                  <g key={d.date}>
-                    <title>
-                      {d.date}: {t("income")} {money(d.income)}, {t("expense")}{" "}
-                      {money(d.expense)}
-                    </title>
-                    <rect
-                      x={20 + i * step}
-                      y={166 - (d.income / max) * 140}
-                      width={step * 0.32}
-                      height={(d.income / max) * 140}
-                      rx="2"
-                      fill="#73a891"
-                    />
-                    <rect
-                      x={20 + i * step + step * 0.37}
-                      y={166 - (d.expense / max) * 140}
-                      width={step * 0.32}
-                      height={(d.expense / max) * 140}
-                      rx="2"
-                      fill="#c99b79"
-                    />
-                    {(i % 5 === 0 || i === days.length - 1) && (
-                      <text
-                        x={20 + i * step + step * 0.3}
-                        y="187"
-                        textAnchor="middle"
-                        fill="currentColor"
-                        fontSize="10"
-                      >
-                        {i + 1}
-                      </text>
-                    )}
-                  </g>
-                ))}
-              </svg>
-              <div className="chart-legend">
-                <span>
-                  <i style={{ background: "#73a891" }} />
-                  {t("income")}
+          <div className="stats financial-stats">
+            {(
+              [
+                { key: "income", icon: ArrowDownLeft, css: "green" },
+                { key: "expense", icon: ArrowUpRight, css: "peach" },
+                { key: "balance", icon: Wallet, css: "purple" },
+              ] as const
+            ).map(({ key, icon: Icon, css }) => (
+              <div key={key} className="stat card">
+                <span className={`stat-icon ${css}`}>
+                  <Icon size={22} />
                 </span>
-                <span>
-                  <i style={{ background: "#c99b79" }} />
-                  {t("expense")}
-                </span>
+                <div>
+                  <small>{t(key === "balance" ? "periodBalance" : key)}</small>
+                  <strong>
+                    {loading ? "—" : money(data?.summary[key] ?? 0)}
+                  </strong>
+                </div>
               </div>
-              {!data?.summary.count && (
-                <p className="muted">{t("financeEmpty")}</p>
-              )}
-            </section>
-            <section className="card feature-card">
-              <h2>{t("expensesByCategory")}</h2>
-              <div className="donut-layout">
-                <svg
-                  viewBox="0 0 120 120"
-                  className="donut"
-                  role="img"
-                  aria-label={t("expensesByCategory")}
-                >
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="45"
-                    fill="none"
-                    stroke="currentColor"
-                    opacity=".08"
-                    strokeWidth="15"
-                  />
-                  {data?.byCategory.map((c, i) => {
-                    const length =
-                      (c.amount / (data.summary.expense || 1)) * 282.743;
-                    const prior = offset;
-                    offset += length;
-                    return (
+            ))}
+          </div>
+          <p className="finance-note">{t("currencyNote")}</p>
+          {loading ? (
+            <div className="empty" role="status">
+              {t("loading")}
+            </div>
+          ) : (
+            <>
+              <div className="finance-charts">
+                <section className="card feature-card">
+                  <h2>{t("cashFlow")}</h2>
+                  <svg
+                    className="cash-chart"
+                    viewBox="0 0 640 200"
+                    role="img"
+                    aria-label={`${t("cashFlow")}: ${t("income")} ${money(data?.summary.income ?? 0)}, ${t("expense")} ${money(data?.summary.expense ?? 0)}`}
+                  >
+                    <line
+                      x1="20"
+                      x2="620"
+                      y1="166"
+                      y2="166"
+                      stroke="currentColor"
+                      opacity=".12"
+                    />
+                    {days.map((d, i) => (
+                      <g key={d.date}>
+                        <title>
+                          {d.date}: {t("income")} {money(d.income)},{" "}
+                          {t("expense")} {money(d.expense)}
+                        </title>
+                        <rect
+                          x={20 + i * step}
+                          y={166 - (d.income / max) * 140}
+                          width={step * 0.32}
+                          height={(d.income / max) * 140}
+                          rx="2"
+                          fill="#73a891"
+                        />
+                        <rect
+                          x={20 + i * step + step * 0.37}
+                          y={166 - (d.expense / max) * 140}
+                          width={step * 0.32}
+                          height={(d.expense / max) * 140}
+                          rx="2"
+                          fill="#c99b79"
+                        />
+                        {(i % 5 === 0 || i === days.length - 1) && (
+                          <text
+                            x={20 + i * step + step * 0.3}
+                            y="187"
+                            textAnchor="middle"
+                            fill="currentColor"
+                            fontSize="10"
+                          >
+                            {i + 1}
+                          </text>
+                        )}
+                      </g>
+                    ))}
+                  </svg>
+                  <div className="chart-legend">
+                    <span>
+                      <i style={{ background: "#73a891" }} />
+                      {t("income")}
+                    </span>
+                    <span>
+                      <i style={{ background: "#c99b79" }} />
+                      {t("expense")}
+                    </span>
+                  </div>
+                  {!data?.summary.count && (
+                    <p className="muted">{t("financeEmpty")}</p>
+                  )}
+                </section>
+                <section className="card feature-card">
+                  <h2>{t("expensesByCategory")}</h2>
+                  <div className="donut-layout">
+                    <svg
+                      viewBox="0 0 120 120"
+                      className="donut"
+                      role="img"
+                      aria-label={t("expensesByCategory")}
+                    >
                       <circle
-                        key={i}
                         cx="60"
                         cy="60"
                         r="45"
                         fill="none"
-                        stroke={c.color ?? "#aaa2bd"}
+                        stroke="currentColor"
+                        opacity=".08"
                         strokeWidth="15"
-                        strokeDasharray={`${length} ${282.743 - length}`}
-                        strokeDashoffset={-prior}
-                        transform="rotate(-90 60 60)"
-                      >
-                        <title>
-                          {c.name ?? t("uncategorized")}: {money(c.amount)}
-                        </title>
-                      </circle>
-                    );
-                  })}
-                </svg>
-                <ul className="category-breakdown">
-                  {data?.byCategory.map((c, i) => (
-                    <li key={i}>
-                      <span>
-                        <i style={{ background: c.color ?? "#aaa2bd" }} />
-                        {c.name ?? t("uncategorized")}
-                      </span>
-                      <strong>{money(c.amount)}</strong>
-                    </li>
-                  ))}
-                </ul>
+                      />
+                      {data?.byCategory.map((c, i) => {
+                        const length =
+                          (c.amount / (data.summary.expense || 1)) * 282.743;
+                        const prior = offset;
+                        offset += length;
+                        return (
+                          <circle
+                            key={i}
+                            cx="60"
+                            cy="60"
+                            r="45"
+                            fill="none"
+                            stroke={c.color ?? "#aaa2bd"}
+                            strokeWidth="15"
+                            strokeDasharray={`${length} ${282.743 - length}`}
+                            strokeDashoffset={-prior}
+                            transform="rotate(-90 60 60)"
+                          >
+                            <title>
+                              {c.name ?? t("uncategorized")}: {money(c.amount)}
+                            </title>
+                          </circle>
+                        );
+                      })}
+                    </svg>
+                    <ul className="category-breakdown">
+                      {data?.byCategory.map((c, i) => (
+                        <li key={i}>
+                          <span>
+                            <i style={{ background: c.color ?? "#aaa2bd" }} />
+                            {c.name ?? t("uncategorized")}
+                          </span>
+                          <strong>{money(c.amount)}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {!data?.summary.expense && (
+                    <p className="muted">{t("financeEmpty")}</p>
+                  )}
+                </section>
               </div>
-              {!data?.summary.expense && (
-                <p className="muted">{t("financeEmpty")}</p>
-              )}
-            </section>
-          </div>
-          <section className="card transactions-card">
-            <div className="calendar-toolbar">
-              <h2>
-                {t("transactions")}{" "}
-                <small className="muted">({data?.summary.count ?? 0})</small>
-              </h2>
-              <select
-                aria-label={t("transactionType")}
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              >
-                <option value="all">{t("allTypes")}</option>
-                <option value="income">{t("income")}</option>
-                <option value="expense">{t("expense")}</option>
-              </select>
-            </div>
-            {!visible.length ? (
-              <div className="empty">
-                <Wallet size={28} />
-                <p>{t("financeEmpty")}</p>
-              </div>
-            ) : (
-              <div className="transaction-list">
-                {visible.map((tr) => (
-                  <article className="transaction-row" key={tr.id}>
-                    <span
-                      className={`stat-icon ${tr.type === "income" ? "green" : "peach"}`}
-                    >
-                      {tr.type === "income" ? (
-                        <ArrowDownLeft size={18} />
-                      ) : (
-                        <ArrowUpRight size={18} />
-                      )}
-                    </span>
-                    <div className="transaction-copy">
-                      <strong>{tr.description}</strong>
-                      <small>
-                        {DateTime.fromISO(tr.date).toFormat(dateFormat)} ·{" "}
-                        {tr.categoryName ?? t("uncategorized")}
-                      </small>
-                    </div>
-                    <strong className={`transaction-amount ${tr.type}`}>
-                      {tr.type === "income" ? "+" : "−"} {money(tr.amountCents)}
-                    </strong>
-                    <div className="row-actions">
-                      <button
-                        className="icon"
-                        disabled={saving}
-                        aria-label={`${t("editTransaction")}: ${tr.description}`}
-                        onClick={() => edit(tr)}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        className="icon"
-                        disabled={saving}
-                        aria-label={`${t("remove")}: ${tr.description}`}
-                        onClick={() => remove(tr)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-            {(data?.summary.count ?? 0) > 500 && (
-              <p className="finance-note">{t("listLimit")}</p>
-            )}
-          </section>
+              <p className="finance-note">{t("cashFlowHint")}</p>
+              <section className="card transactions-card">
+                <div className="calendar-toolbar">
+                  <h2>
+                    {t("transactions")}{" "}
+                    <small className="muted">
+                      ({data?.summary.count ?? 0})
+                    </small>
+                  </h2>
+                  <select
+                    aria-label={t("transactionType")}
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  >
+                    <option value="all">{t("allTypes")}</option>
+                    <option value="income">{t("income")}</option>
+                    <option value="expense">{t("expense")}</option>
+                  </select>
+                </div>
+                {!visible.length ? (
+                  <div className="empty">
+                    <Wallet size={28} />
+                    <p>{t("financeEmpty")}</p>
+                  </div>
+                ) : (
+                  <div className="transaction-list">
+                    {visible.map((tr) => (
+                      <article className="transaction-row" key={tr.id}>
+                        <span
+                          className={`stat-icon ${tr.type === "income" ? "green" : "peach"}`}
+                        >
+                          {tr.type === "income" ? (
+                            <ArrowDownLeft size={18} />
+                          ) : (
+                            <ArrowUpRight size={18} />
+                          )}
+                        </span>
+                        <div className="transaction-copy">
+                          <strong>{tr.description}</strong>
+                          <small>
+                            {DateTime.fromISO(tr.date).toFormat(dateFormat)} ·{" "}
+                            {tr.categoryName ?? t("uncategorized")}
+                            {tr.obligationId
+                              ? ` · ${t("financeLinked")}`
+                              : tr.investmentId
+                                ? ` · ${t("investments")}`
+                                : ""}
+                          </small>
+                        </div>
+                        <strong className={`transaction-amount ${tr.type}`}>
+                          {tr.type === "income" ? "+" : "−"}{" "}
+                          {money(tr.amountCents)}
+                        </strong>
+                        <div className="row-actions">
+                          <button
+                            className="icon"
+                            disabled={saving}
+                            aria-label={`${t("editTransaction")}: ${tr.description}`}
+                            onClick={() => edit(tr)}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            className="icon"
+                            disabled={saving}
+                            aria-label={`${t("remove")}: ${tr.description}`}
+                            onClick={() => remove(tr)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                {(data?.summary.count ?? 0) > 500 && (
+                  <p className="finance-note">{t("listLimit")}</p>
+                )}
+              </section>
+            </>
+          )}
         </>
+      )}
+      {view !== "overview" && (
+        <FinanceManagement
+          view={view}
+          token={token}
+          locale={locale}
+          timezone={timezone}
+          dateFormat={dateFormat}
+          month={month}
+          obligations={obligations}
+          investments={investments}
+          categories={categories}
+          revision={reload}
+          changed={() => {
+            setReload((n) => n + 1);
+            setNotice(t("financeUpdated"));
+          }}
+          onError={onError}
+          onDraft={(d) => {
+            setEditing(null);
+            setError("");
+            setDrafts([d]);
+          }}
+          onEdit={edit}
+          onRemove={remove}
+        />
       )}
       {drafts && (
         <Modal
@@ -701,6 +794,49 @@ export default function Finance({
                       </select>
                     </label>
                   </div>
+                  <label>
+                    {t("linkedBill")}
+                    <select
+                      value={d.obligationId ?? ""}
+                      disabled={d.type !== "expense"}
+                      onChange={(e) =>
+                        patch(i, "obligationId", e.target.value || null)
+                      }
+                    >
+                      <option value="">{t("noLink")}</option>
+                      {obligations
+                        .filter(
+                          (o) =>
+                            o.remainingCents > 0 || o.id === d.obligationId,
+                        )
+                        .map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.title} ·{" "}
+                            {DateTime.fromISO(o.dueDate).toFormat(dateFormat)} ·{" "}
+                            {t("remaining")}: {money(o.remainingCents)}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    {t("linkedInvestment")}
+                    <select
+                      value={d.investmentId ?? ""}
+                      onChange={(e) =>
+                        patch(i, "investmentId", e.target.value || null)
+                      }
+                    >
+                      <option value="">{t("noLink")}</option>
+                      {investments.map((inv) => (
+                        <option key={inv.id} value={inv.id}>
+                          {inv.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {d.obligationId && (
+                    <p className="finance-note">{t("paymentHint")}</p>
+                  )}
                 </div>
               ))}
             </div>
