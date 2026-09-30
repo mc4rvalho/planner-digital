@@ -199,6 +199,9 @@ test("profile, event editing, financial isolation and password lifecycle", async
         expense: 1234,
         count: 2,
         balance: 48766,
+        invested: 0,
+        redeemed: 0,
+        spending: 1234,
       });
       assert.equal(result.daily[0].date, "2026-10-10");
       assert.equal(result.byCategory[0].amount, 1234);
